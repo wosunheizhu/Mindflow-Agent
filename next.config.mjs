@@ -8,9 +8,9 @@ const nextConfig = {
     NEXT_PUBLIC_VOICE_SERVER_URL: process.env.VOICE_SERVER_URL,
   },
   webpack: (config, { isServer }) => {
-    // 在服务器端构建时，将 playwright 标记为外部依赖
+    // 在服务器端构建时，将大型依赖标记为外部依赖
     if (isServer) {
-      config.externals = [...(config.externals || []), 'playwright'];
+      config.externals = [...(config.externals || []), 'playwright', 'tesseract.js'];
     }
     return config;
   },

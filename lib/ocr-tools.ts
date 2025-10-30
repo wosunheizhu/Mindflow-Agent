@@ -1,15 +1,36 @@
 /**
  * OCR 文字识别工具
  * 使用 Tesseract.js 识别图片和 PDF 中的文字
+ * 注意：在 Vercel 等无服务器环境中不可用
  */
 
-import { createWorker } from 'tesseract.js';
-import { readFile } from 'fs/promises';
+// 条件导入 tesseract.js，在构建时如果不存在则使用 mock
+let createWorker: any;
+try {
+  if (typeof window === 'undefined') {
+    const tesseract = require('tesseract.js');
+    createWorker = tesseract.createWorker;
+  }
+} catch (e) {
+  // Tesseract.js 不可用（如 Vercel 环境）
+  createWorker = null;
+}
 
 /**
  * 识别图片中的文字
  */
 export async function recognizeText(imagePath: string, lang: string = 'chi_sim+eng'): Promise<any> {
+  // 检查 tesseract.js 是否可用
+  if (!createWorker) {
+    return {
+      success: false,
+      error: 'OCR 功能在当前环境中不可用（需要本地部署或支持 Tesseract.js 的环境）',
+      message: '请在本地环境或 Railway 等平台使用此功能',
+      text: '',
+      confidence: 0
+    };
+  }
+  
   try {
     const worker = await createWorker(lang);
     
