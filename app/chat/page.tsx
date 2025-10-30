@@ -58,7 +58,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [deepThinking, setDeepThinking] = useState(false);
   const [browserSearch, setBrowserSearch] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<'ollama' | 'openai' | 'gpt4-turbo' | 'gpt5-thinking' | 'gpt5-pro' | 'claude'>('openai');
+  const [selectedModel, setSelectedModel] = useState<'openai' | 'gpt4-turbo' | 'gpt5-thinking' | 'gpt5-pro' | 'claude'>('openai');
   const [avatarEnabled, setAvatarEnabled] = useState(true); // 数字员工功能开关（默认开启）
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false); // 登录提示弹窗
@@ -656,16 +656,15 @@ export default function ChatPage() {
             <label className="text-xs text-gray-500 whitespace-nowrap">模型:</label>
             <select 
               value={selectedModel} 
-              onChange={(e) => setSelectedModel(e.target.value as 'ollama' | 'openai' | 'gpt4-turbo' | 'gpt5-thinking' | 'gpt5-pro' | 'claude')}
+              onChange={(e) => setSelectedModel(e.target.value as 'openai' | 'gpt4-turbo' | 'gpt5-thinking' | 'gpt5-pro' | 'claude')}
               className="select text-sm py-1 px-2"
               disabled={loading}
             >
-              <option value="gpt5-pro">Mindflow-Y-Pro（强推理）</option>
-              <option value="gpt5-thinking">Mindflow-Y（强推理）</option>
               <option value="openai">Mindflow-Y-Workflow（推荐-自动工作流）</option>
               <option value="gpt4-turbo">Mindflow-Y-Fast（快速工作流）</option>
+              <option value="gpt5-pro">Mindflow-Y-Pro（强推理）</option>
+              <option value="gpt5-thinking">Mindflow-Y（强推理）</option>
               <option value="claude">Mindflow-X-Workflow（Beta-Testing）</option>
-              <option value="ollama">gpt-oss:20b (本地)</option>
             </select>
           </div>
         </div>

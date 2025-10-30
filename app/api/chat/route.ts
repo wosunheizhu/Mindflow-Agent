@@ -6,13 +6,7 @@ import Anthropic from "@anthropic-ai/sdk";
 const getAIService = () => {
   const provider = process.env.AI_PROVIDER || 'openai';
   
-  if (provider === 'ollama') {
-    return {
-      baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-      model: process.env.OLLAMA_MODEL || 'gpt-oss-20b',
-      provider: 'ollama'
-    };
-  } else if (provider === 'claude') {
+  if (provider === 'claude') {
     return {
       client: new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -29,7 +23,7 @@ const getAIService = () => {
   } else {
     return {
       client: new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+        apiKey: process.env.OPENAI_API_KEY!,
       }),
       provider: 'openai'
     };
@@ -59,13 +53,7 @@ export async function POST(req: NextRequest): Promise<Response> {
     let aiService;
     if (modelProvider) {
       // 用户明确指定了模型
-      if (modelProvider === 'ollama') {
-        aiService = {
-          baseURL: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
-          model: process.env.OLLAMA_MODEL || 'gpt-oss:20b',
-          provider: 'ollama'
-        };
-      } else if (modelProvider === 'claude') {
+      if (modelProvider === 'claude') {
         const Anthropic = require('@anthropic-ai/sdk');
         aiService = {
           client: new Anthropic({
@@ -117,7 +105,6 @@ export async function POST(req: NextRequest): Promise<Response> {
       aiService = getAIService();
     }
     
-    // 支持Ollama模式下的工具调用
     const actualUseTools = useTools;
 
     // 系统提示词 - 通用智能体协议
