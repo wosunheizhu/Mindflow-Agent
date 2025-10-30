@@ -58,7 +58,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
             <aside className="col-span-12 md:col-span-3 lg:col-span-2">
               <SideNav activePath={pathname} />
               <div id="avatar-chat">
-                <AvatarDisplay isExpanded={false} onExpandChange={handleExpandChange} />
+              <AvatarDisplay isExpanded={false} onExpandChange={handleExpandChange} />
               </div>
             </aside>
             

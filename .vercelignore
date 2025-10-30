@@ -20,7 +20,6 @@ voice_requirements.txt
 
 # Test files
 test-*.js
-test-*.html
 
 # Documentation
 *.md
@@ -33,20 +32,4 @@ generated_files/
 reports/
 test-results/
 test-folder/
-
-# Heavy dependencies (not needed in serverless)
-node_modules/playwright/
-node_modules/canvas/
-node_modules/@pinecone-database/
-node_modules/chartjs-node-canvas/
-node_modules/googleapis/
-node_modules/tesseract.js/
-
-# Shell scripts
-*.sh
-
-# Docker files
-Dockerfile
-.dockerignore
-.railwayignore
 

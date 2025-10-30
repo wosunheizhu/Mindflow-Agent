@@ -15,7 +15,8 @@ export async function generateChart(
   options?: any
 ): Promise<string> {
   try {
-    const outputDir = path.join(process.cwd(), 'outputs');
+    // Vercel环境使用/tmp目录
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
     const filename = `chart_${Date.now()}.html`;
     const filepath = path.join(outputDir, filename);
 

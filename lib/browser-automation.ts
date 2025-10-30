@@ -1,33 +1,14 @@
 /**
  * 浏览器自动化工具
  * 使用 Playwright 实现网页自动化操作
- * 注意：在 Vercel 等无服务器环境中不可用
  */
 
-// 条件导入 playwright，在构建时如果不存在则使用 mock
-let chromium: any;
-try {
-  if (typeof window === 'undefined') {
-    chromium = require('playwright').chromium;
-  }
-} catch (e) {
-  // Playwright 不可用（如 Vercel 环境）
-  chromium = null;
-}
+import { chromium } from 'playwright';
 
 /**
  * 访问网页并截图
  */
 export async function visitWebsite(url: string, action?: string): Promise<any> {
-  // 检查 playwright 是否可用
-  if (!chromium) {
-    return {
-      success: false,
-      error: '浏览器自动化功能在当前环境中不可用（需要本地部署或支持 Playwright 的环境）',
-      message: '请在本地环境或 Railway 等平台使用此功能'
-    };
-  }
-  
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
