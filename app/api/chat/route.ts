@@ -1011,7 +1011,8 @@ export async function POST(req: NextRequest): Promise<Response> {
                 : JSON.stringify(agentResponse.content);
 
               // 调用Python LLM-TTS双向流式服务
-              const llmTtsResponse = await fetch('http://localhost:8001/api/llm-tts-stream', {
+              const voiceServerUrl = process.env.VOICE_SERVER_URL || 'http://localhost:8001';
+              const llmTtsResponse = await fetch(`${voiceServerUrl}/api/llm-tts-stream`, {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json'

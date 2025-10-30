@@ -14,7 +14,8 @@ export async function POST(req: NextRequest): Promise<Response> {
     console.log(`💬 数字人闲聊请求 [${voice}]: ${message}`);
 
     // 调用 Python 双向流式闲聊服务（SSE流式）
-    const response = await fetch('http://localhost:8001/api/avatar-chat-stream', {
+    const voiceServerUrl = process.env.VOICE_SERVER_URL || 'http://localhost:8001';
+    const response = await fetch(`${voiceServerUrl}/api/avatar-chat-stream`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

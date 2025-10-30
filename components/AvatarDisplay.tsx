@@ -421,7 +421,9 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     };
 
     try {
-      const response = await fetch('http://localhost:8001/api/avatar-chat-stream', {
+      // 使用环境变量或本地地址
+      const voiceServerUrl = process.env.NEXT_PUBLIC_VOICE_SERVER_URL || 'http://localhost:8001';
+      const response = await fetch(`${voiceServerUrl}/api/avatar-chat-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
