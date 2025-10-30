@@ -1,6 +1,6 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
-import { Search, Code2, FileText, BarChart3, Globe, Play, Save, Plus, Trash2, Download, Upload } from 'lucide-react';
+import { Search, Code2, FileText, BarChart3, Globe, Play, Save, Plus, Trash2, Download, Upload, Lock } from 'lucide-react';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import 'reactflow/dist/style.css';
@@ -219,7 +219,7 @@ export default function WorkflowsPage() {
       {!isLoggedIn && (
         <>
           {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
-          <div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+          <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center rounded-lg">
             {/* 提示卡片 - 照搬LoginPrompt样式 */}
             <div className="w-full max-w-sm mx-4 bg-white dark:bg-[rgb(22,23,24)] rounded-xl border border-border dark:border-border-dark shadow-2xl">
               {/* 头部 */}

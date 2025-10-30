@@ -17,9 +17,10 @@ export async function POST(req: NextRequest): Promise<Response> {
     // 保存上传的文件到 uploads 目录
     const fs = require('fs');
     const path = require('path');
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    // Vercel环境使用/tmp目录
+    const uploadsDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
     
-    if (!fs.existsSync(uploadsDir)) {
+    if (!fs.existsSync(uploadsDir) && !process.env.VERCEL) {
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
     

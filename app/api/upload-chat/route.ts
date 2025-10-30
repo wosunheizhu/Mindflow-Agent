@@ -12,8 +12,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "未选择文件" }, { status: 400 });
     }
 
-    const uploadsDir = path.join(process.cwd(), "uploads");
-    if (!existsSync(uploadsDir)) {
+    // Vercel环境使用/tmp目录
+    const uploadsDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), "uploads");
+    if (!existsSync(uploadsDir) && !process.env.VERCEL) {
       await mkdir(uploadsDir, { recursive: true });
     }
 
