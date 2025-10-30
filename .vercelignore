@@ -29,6 +29,12 @@ generated_files/
 reports/
 test-results/
 
+# Next.js缓存（构建缓存不应打包）
+.next/cache/
+
+# 大图片文件
+public/avatars/ChatGPT*.png
+
 # 开发配置
 .env
 .env*.local
