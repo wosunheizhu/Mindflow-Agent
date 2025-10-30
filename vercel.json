@@ -1,6 +1,5 @@
 {
   "buildCommand": "pnpm run build",
-  "outputDirectory": ".next",
   "framework": "nextjs",
   "regions": ["sin1"],
   "functions": {
@@ -8,13 +7,6 @@
       "maxDuration": 60,
       "memory": 1024
     }
-  },
-  "outputFileTracing": true,
-  "excludeFiles": [
-    "node_modules/playwright/**",
-    "node_modules/canvas/**",
-    "node_modules/@pinecone-database/**",
-    "node_modules/chartjs-node-canvas/**"
-  ]
+  }
 }
 
