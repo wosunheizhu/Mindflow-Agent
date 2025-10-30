@@ -1,0 +1,52 @@
+# Railway 前端服务环境变量模板
+# 复制这些变量到 Railway Dashboard 的环境变量设置中
+
+# ===== Node 环境 =====
+NODE_ENV=production
+NEXT_TELEMETRY_DISABLED=1
+
+# ===== OpenAI API =====
+OPENAI_API_KEY=sk-your-openai-api-key
+OPENAI_API_BASE=https://api.openai.com/v1
+
+# ===== Anthropic API (Claude) =====
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-api-key
+
+# ===== 语音服务连接 =====
+# 使用 Railway 服务引用（推荐）
+VOICE_SERVER_URL=${{backend.RAILWAY_PUBLIC_DOMAIN}}
+NEXT_PUBLIC_VOICE_SERVER_URL=${{backend.RAILWAY_PUBLIC_DOMAIN}}
+
+# 或使用私有网络（更快，仅服务间通信）
+# VOICE_SERVER_URL=${{backend.RAILWAY_PRIVATE_DOMAIN}}
+
+# 或使用固定 URL
+# VOICE_SERVER_URL=https://your-backend.railway.app
+# NEXT_PUBLIC_VOICE_SERVER_URL=https://your-backend.railway.app
+
+# ===== 搜索 API =====
+SERPER_API_KEY=your-serper-api-key
+JINA_API_KEY=your-jina-api-key
+
+# ===== Aspose 文档处理 =====
+ASPOSE_WORDS_CLIENT_ID=your-aspose-words-client-id
+ASPOSE_WORDS_CLIENT_SECRET=your-aspose-words-client-secret
+ASPOSE_SLIDES_CLIENT_ID=your-aspose-slides-client-id
+ASPOSE_SLIDES_CLIENT_SECRET=your-aspose-slides-client-secret
+
+# ===== 可选：其他 LLM API =====
+# DEEPSEEK_API_KEY=your-deepseek-key
+# DEEPSEEK_API_BASE=https://api.deepseek.com
+
+# ===== 可选：数据库（如需要）=====
+# DATABASE_URL=${{Postgres.DATABASE_URL}}
+
+# ===== 可选：Redis（如需要）=====
+# REDIS_URL=${{Redis.REDIS_URL}}
+
+# ===== 注意事项 =====
+# 1. 所有 NEXT_PUBLIC_ 开头的变量会暴露给浏览器
+# 2. 敏感信息不要使用 NEXT_PUBLIC_ 前缀
+# 3. Railway 服务引用格式: ${{service-name.VARIABLE}}
+# 4. 可以在 Railway Dashboard 中使用变量引用
+

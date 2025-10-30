@@ -2,6 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   experimental: { typedRoutes: false },
+  output: 'standalone', // 支持 Docker 独立部署
   env: {
     // 暴露环境变量给客户端（用于前端组件）
     NEXT_PUBLIC_VOICE_SERVER_URL: process.env.VOICE_SERVER_URL,
