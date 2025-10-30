@@ -1242,9 +1242,12 @@ async function createDocumentTool(filename: string, content: string, format: str
         break;
       }
       case 'word': {
+        // Word文档创建功能已禁用（officegen在Vercel不兼容）
+        throw new Error('Word文档创建功能暂不支持，请使用Markdown格式。Markdown支持标题、列表、表格等丰富格式。');
+        
+        /* 注释掉Word创建代码避免require('officegen')被打包
         if (!outFilename.endsWith('.docx')) outFilename += '.docx';
         mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        // 使用 officegen 生成到内存 Buffer
         const officegen = require('officegen');
         const docx = officegen('docx');
         if (options?.title) {
@@ -1252,28 +1255,8 @@ async function createDocumentTool(filename: string, content: string, format: str
           p.addText(options.title, { bold: true, font_size: 18, font_face: 'Arial' });
           p.addLineBreak();
         }
-        const lines = String(content).split('\n');
-        for (const line of lines) {
-          const p = docx.createP();
-          if (!line.trim()) continue;
-          if (line.startsWith('# ')) {
-            p.addText(line.substring(2), { bold: true, font_size: 16 });
-          } else if (line.startsWith('## ')) {
-            p.addText(line.substring(3), { bold: true, font_size: 14 });
-          } else if (line.startsWith('- ') || line.startsWith('* ')) {
-            p.addText('• ' + line.substring(2));
-          } else {
-            p.addText(line);
-          }
-        }
-        buffer = await new Promise<Buffer>((resolve, reject) => {
-          const chunks: Buffer[] = [];
-          const stream = new PassThrough();
-          stream.on('data', (c: Buffer) => chunks.push(c));
-          stream.on('error', (e: any) => reject(e));
-          stream.on('finish', () => resolve(Buffer.concat(chunks)));
-          docx.generate(stream);
-        });
+        */ 
+        // 结束注释
         break;
       }
       case 'excel': {

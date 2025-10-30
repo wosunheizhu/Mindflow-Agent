@@ -23,7 +23,7 @@ const getAIService = () => {
   } else {
     return {
       client: new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY!,
+  apiKey: process.env.OPENAI_API_KEY!,
       }),
       provider: 'openai'
     };

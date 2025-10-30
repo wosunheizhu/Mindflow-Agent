@@ -44,12 +44,11 @@ export async function createMarkdown(filename: string, content: string, frontmat
  * 创建 Word 文档
  */
 export async function createWord(filename: string, content: string, options?: any): Promise<string> {
+  // Word文档创建功能已完全禁用（officegen在生产环境不兼容）
+  throw new Error('Word文档创建功能暂不支持，请使用Markdown格式。Markdown支持标题、列表、表格等丰富格式。');
+  
+  /* 注释掉避免require('officegen')被打包
   try {
-    // Vercel环境暂不支持Word创建（officegen依赖问题）
-    if (process.env.VERCEL) {
-      throw new Error('Word文档创建功能暂不支持生产环境，请使用Markdown格式');
-    }
-    
     const officegen = require('officegen');
     const fs = require('fs');
     const path = require('path');
@@ -128,6 +127,7 @@ export async function createWord(filename: string, content: string, options?: an
   } catch (error: any) {
     throw new Error(`Word 文档创建失败: ${error.message}`);
   }
+  */
 }
 
 /**

@@ -92,8 +92,8 @@ export default function Settings() {
                   </div>
                 </button>
               </div>
-            </div>
-          </div>
+        </div>
+      </div>
         </>
       )}
       
