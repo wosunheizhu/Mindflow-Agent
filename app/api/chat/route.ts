@@ -114,13 +114,7 @@ export async function POST(req: NextRequest): Promise<Response> {
       }
     } else {
       // 使用环境变量配置
-      const defaultService = getAIService();
-      if (!defaultService.client && defaultService.provider === 'openai') {
-        defaultService.client = new OpenAI({
-          apiKey: process.env.OPENAI_API_KEY!,
-        });
-      }
-      aiService = defaultService;
+      aiService = getAIService();
     }
     
     // 支持Ollama模式下的工具调用
