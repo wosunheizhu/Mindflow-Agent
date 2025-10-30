@@ -9,11 +9,13 @@ type DownloadMeta = {
   createdAt: number;
 };
 
-const TEMP_DIR = path.join(process.cwd(), '.temp-downloads');
+// Vercel环境使用/tmp，本地使用.temp-downloads
+const TEMP_DIR = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), '.temp-downloads');
 
 // 确保临时目录存在
 async function ensureTempDir() {
-  if (!existsSync(TEMP_DIR)) {
+  // Vercel的/tmp目录始终存在，本地环境才需要创建
+  if (!process.env.VERCEL && !existsSync(TEMP_DIR)) {
     await mkdir(TEMP_DIR, { recursive: true });
   }
 }

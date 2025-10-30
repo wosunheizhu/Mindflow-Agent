@@ -12,8 +12,9 @@ import { existsSync } from "fs";
  */
 export async function createMarkdown(filename: string, content: string, frontmatter?: any): Promise<string> {
   try {
-    const outputDir = path.join(process.cwd(), 'outputs');
-    if (!existsSync(outputDir)) {
+    // Vercel环境使用/tmp目录（唯一可写目录）
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+    if (!existsSync(outputDir) && !process.env.VERCEL) {
       await mkdir(outputDir, { recursive: true });
     }
 
@@ -48,8 +49,9 @@ export async function createWord(filename: string, content: string, options?: an
     const fs = require('fs');
     const path = require('path');
 
-    const outputDir = path.join(process.cwd(), 'outputs');
-    if (!fs.existsSync(outputDir)) {
+    // Vercel环境使用/tmp目录
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+    if (!fs.existsSync(outputDir) && !process.env.VERCEL) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
@@ -128,8 +130,9 @@ export async function createWord(filename: string, content: string, options?: an
  */
 export async function createTextFile(filename: string, content: string): Promise<string> {
   try {
-    const outputDir = path.join(process.cwd(), 'outputs');
-    if (!existsSync(outputDir)) {
+    // Vercel环境使用/tmp目录
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+    if (!existsSync(outputDir) && !process.env.VERCEL) {
       await mkdir(outputDir, { recursive: true });
     }
 
@@ -151,8 +154,9 @@ export async function createExcel(filename: string, data: any[][], sheetName: st
     const path = require('path');
     const fs = require('fs');
 
-    const outputDir = path.join(process.cwd(), 'outputs');
-    if (!fs.existsSync(outputDir)) {
+    // Vercel环境使用/tmp目录
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+    if (!fs.existsSync(outputDir) && !process.env.VERCEL) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
@@ -181,8 +185,9 @@ export async function createExcel(filename: string, data: any[][], sheetName: st
  */
 export async function createJSON(filename: string, data: any): Promise<string> {
   try {
-    const outputDir = path.join(process.cwd(), 'outputs');
-    if (!existsSync(outputDir)) {
+    // Vercel环境使用/tmp目录
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+    if (!existsSync(outputDir) && !process.env.VERCEL) {
       await mkdir(outputDir, { recursive: true });
     }
 
