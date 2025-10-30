@@ -55,9 +55,13 @@ export default function WorkflowsPage() {
   const [mounted, setMounted] = useState(false);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    // 检查登录状态
+    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    setIsLoggedIn(loggedIn);
   }, []);
   
   // 检查是否需要登录
@@ -210,7 +214,39 @@ export default function WorkflowsPage() {
   }, []);
 
   return (
-    <div className="grid gap-4">
+    <div className="relative">
+      {/* 未登录遮罩层 */}
+      {!isLoggedIn && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 border-2 border-blue-500">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-blue-600 dark:text-blue-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                需要登录
+              </h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6">
+                工作流功能需要登录后才能访问
+              </p>
+              <button
+                onClick={() => {
+                  setShowLoginPrompt(false);
+                  setShowLogin(true);
+                }}
+                className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg font-medium"
+              >
+                立即登录
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* 主内容（未登录时虚化） */}
+      <div className={`grid gap-4 ${!isLoggedIn ? 'blur-sm pointer-events-none' : ''}`}>
       {/* 顶部工具栏 */}
       <div className="card p-4">
         <div className="flex items-center justify-between">
@@ -366,9 +402,10 @@ export default function WorkflowsPage() {
           setShowLogin(true);
         }}
       />
+    </div>
 
-      {/* 登录弹窗 */}
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
+    {/* 登录弹窗 */}
+    <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }
