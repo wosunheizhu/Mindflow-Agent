@@ -1,3 +1,11 @@
+# Git
+.git/
+.gitignore
+
+# pnpm
+.pnpm-store/
+node_modules/.pnpm/
+
 # Python files
 venv_voice/
 __pycache__/
@@ -20,6 +28,7 @@ voice_requirements.txt
 
 # Test files
 test-*.js
+test-*.html
 
 # Documentation
 *.md
@@ -32,4 +41,25 @@ generated_files/
 reports/
 test-results/
 test-folder/
+
+# Large assets
+public/avatars/ChatGPT*.png
+
+# Build cache
+.next/cache/
+
+# Railway and Docker files
+Dockerfile
+.dockerignore
+railway.json
+.railwayignore
+Procfile
+
+# Shell scripts
+*.sh
+
+# Development
+.env
+.env.local
+.env*.local
 
