@@ -14,6 +14,18 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'development',
   },
 
+  // 排除不需要打包到serverless function的文件
+  experimental: {
+    outputFileTracingExcludes: {
+      '*': [
+        '.next/cache/**',
+        'node_modules/@swc/core-linux-x64-gnu',
+        'node_modules/@swc/core-linux-x64-musl',
+        'node_modules/@esbuild/**',
+      ],
+    },
+  },
+
   webpack: (config) => {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
