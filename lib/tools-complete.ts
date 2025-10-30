@@ -1242,22 +1242,12 @@ async function createDocumentTool(filename: string, content: string, format: str
         break;
       }
       case 'word': {
-        // Word文档创建功能已禁用（officegen在Vercel不兼容）
-        throw new Error('Word文档创建功能暂不支持，请使用Markdown格式。Markdown支持标题、列表、表格等丰富格式。');
-        
-        /* 注释掉Word创建代码避免require('officegen')被打包
-        if (!outFilename.endsWith('.docx')) outFilename += '.docx';
-        mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-        const officegen = require('officegen');
-        const docx = officegen('docx');
-        if (options?.title) {
-          const p = docx.createP();
-          p.addText(options.title, { bold: true, font_size: 18, font_face: 'Arial' });
-          p.addLineBreak();
+        // Vercel环境不支持Word创建（officegen已移除）
+        if (process.env.VERCEL) {
+          throw new Error('Word文档创建功能暂不支持生产环境，请使用Markdown格式');
         }
-        */ 
-        // 结束注释
-        break;
+        // 本地环境提示Word功能已禁用
+        throw new Error('Word文档创建功能已禁用，请使用Markdown格式替代');
       }
       case 'excel': {
         if (!outFilename.endsWith('.xlsx')) outFilename += '.xlsx';

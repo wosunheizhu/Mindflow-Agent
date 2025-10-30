@@ -219,7 +219,7 @@ export default function WorkflowsPage() {
       {!isLoggedIn && (
         <>
           {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
-          <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center rounded-lg" style={{ minHeight: '80vh' }}>
+          <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center rounded-lg" style={{ minHeight: '400px' }}>
             {/* 提示卡片 - 照搬LoginPrompt样式 */}
             <div className="w-full max-w-sm mx-4 bg-white dark:bg-[rgb(22,23,24)] rounded-xl border border-border dark:border-border-dark shadow-2xl">
               {/* 头部 */}
