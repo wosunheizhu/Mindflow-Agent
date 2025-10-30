@@ -60,27 +60,36 @@ export default function Settings() {
       {!isLoggedIn && (
         <>
           {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
-          <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center rounded-lg">
-            {/* 提示卡片 */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 border-2 border-blue-500">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-                  <Lock size={32} className="text-blue-600 dark:text-blue-400" />
+          <div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+            {/* 提示卡片 - 照搬LoginPrompt样式 */}
+            <div className="w-full max-w-sm mx-4 bg-white dark:bg-[rgb(22,23,24)] rounded-xl border border-border dark:border-border-dark shadow-2xl">
+              {/* 头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-border dark:border-border-dark">
+                <div className="text-base font-semibold">需要登录</div>
+              </div>
+
+              {/* 内容 */}
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-3">
+                    <Lock size={24} className="text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    此功能需要登录内测账号才能使用
+                  </p>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                  需要登录
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  设置功能需要登录后才能访问
-                </p>
-                <button
+
+                <button 
                   onClick={() => {
                     setShowLoginPrompt(false);
                     setShowLogin(true);
                   }}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg font-medium"
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all hover:shadow-lg hover:scale-105"
                 >
-                  立即登录
+                  <div className="flex items-center justify-center gap-2">
+                    <Lock size={20} className="text-blue-600 dark:text-blue-400" />
+                    <div className="font-semibold">登录</div>
+                  </div>
                 </button>
               </div>
             </div>
@@ -90,12 +99,6 @@ export default function Settings() {
       
       {/* 主内容（未登录时禁止交互，但不模糊） */}
       <div className={`grid gap-3 ${!isLoggedIn ? 'pointer-events-none' : ''}`}>
-      <div className="card p-4">
-        <div className="text-lg font-semibold">AI 模型配置</div>
-        <div className="text-xs text-gray-500 mt-1">
-          真实调用请在服务端配置环境变量（.env.local）。此处仅做前端说明与占位存储。
-        </div>
-      </div>
 
       {/* AI 服务选择 */}
       <div className="card p-4">

@@ -219,29 +219,38 @@ export default function WorkflowsPage() {
       {!isLoggedIn && (
         <>
           {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
-          <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center rounded-lg">
-            {/* 提示卡片 */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 border-2 border-blue-500">
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-8 h-8 text-blue-600 dark:text-blue-400">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                  </svg>
+          <div className="absolute inset-0 z-40 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+            {/* 提示卡片 - 照搬LoginPrompt样式 */}
+            <div className="w-full max-w-sm mx-4 bg-white dark:bg-[rgb(22,23,24)] rounded-xl border border-border dark:border-border-dark shadow-2xl">
+              {/* 头部 */}
+              <div className="flex items-center justify-between p-4 border-b border-border dark:border-border-dark">
+                <div className="text-base font-semibold">需要登录</div>
+              </div>
+
+              {/* 内容 */}
+              <div className="p-6">
+                <div className="text-center mb-6">
+                  <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-blue-600 dark:text-blue-400">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    此功能需要登录内测账号才能使用
+                  </p>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                  需要登录
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400 mb-6">
-                  工作流功能需要登录后才能访问
-                </p>
-                <button
+
+                <button 
                   onClick={() => {
                     setShowLoginPrompt(false);
                     setShowLogin(true);
                   }}
-                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg font-medium"
+                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all hover:shadow-lg hover:scale-105"
                 >
-                  立即登录
+                  <div className="flex items-center justify-center gap-2">
+                    <Lock size={20} className="text-blue-600 dark:text-blue-400" />
+                    <div className="font-semibold">登录</div>
+                  </div>
                 </button>
               </div>
             </div>
