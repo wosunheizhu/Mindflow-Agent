@@ -45,6 +45,11 @@ export async function createMarkdown(filename: string, content: string, frontmat
  */
 export async function createWord(filename: string, content: string, options?: any): Promise<string> {
   try {
+    // Vercel环境暂不支持Word创建（officegen依赖问题）
+    if (process.env.VERCEL) {
+      throw new Error('Word文档创建功能暂不支持生产环境，请使用Markdown格式');
+    }
+    
     const officegen = require('officegen');
     const fs = require('fs');
     const path = require('path');

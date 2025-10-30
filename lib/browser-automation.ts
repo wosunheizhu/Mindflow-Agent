@@ -143,9 +143,9 @@ export async function extractWebData(url: string, selectors: string[]): Promise<
       try {
         const elements = await page.$$(selector);
         const texts = await Promise.all(
-          elements.map(el => el.textContent())
+          elements.map((el: any) => el.textContent())
         );
-        data[selector] = texts.filter(t => t && t.trim());
+        data[selector] = texts.filter((t: any) => t && t.trim());
       } catch (e) {
         data[selector] = [];
       }
