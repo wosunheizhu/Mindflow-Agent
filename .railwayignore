@@ -1,0 +1,32 @@
+# Railway应该忽略所有前端文件，只部署Python后端
+
+# Node.js 文件
+package.json
+package-lock.json
+node_modules/
+pnpm-lock.yaml
+
+# Next.js 前端
+app/
+components/
+lib/
+public/
+.next/
+next.config.*
+tsconfig.json
+tailwind.config.*
+postcss.config.*
+
+# 测试文件
+test-*.js
+*.test.js
+
+# 文档
+*.md
+!README.md
+
+# 其他前端资源
+*.tsx
+*.jsx
+*.css
+
