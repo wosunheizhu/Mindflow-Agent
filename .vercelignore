@@ -1,10 +1,8 @@
-# Git
+# Git（但不排除代码文件）
 .git/
-.gitignore
 
-# pnpm
+# pnpm（但不排除项目代码）
 .pnpm-store/
-node_modules/.pnpm/
 
 # Python files
 venv_voice/
