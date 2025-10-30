@@ -1,0 +1,35 @@
+# Python files
+venv_voice/
+__pycache__/
+*.py
+*.pyc
+*.pyo
+*.pyd
+voice_server.py
+llm_tts_stream.py
+doubao_tts_client.py
+xfyun_asr_client.py
+llm_client.py
+
+# Python requirements
+requirements.txt
+voice_requirements.txt
+
+# Logs
+*.log
+
+# Test files
+test-*.js
+
+# Documentation
+*.md
+!README.md
+
+# Uploads and outputs
+uploads/
+outputs/
+generated_files/
+reports/
+test-results/
+test-folder/
+
