@@ -4,10 +4,11 @@ import NextImage from 'next/image';
 import { Send, User, Bot, Loader2, Wrench, Check, ChevronDown, ChevronUp, Brain, Upload, Image, FileText, X, Search, UserCircle2, Volume2, Mic, MicOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import JsonView from '@/components/JsonView';
-import LoginPrompt from '@/components/LoginPrompt';
-import LoginModal from '@/components/LoginModal';
-import OnboardingGuide from '@/components/OnboardingGuide';
-import ResetOnboarding from '@/components/ResetOnboarding';
+// 暂时注释，Vercel构建问题
+// import LoginPrompt from '@/components/LoginPrompt';
+// import LoginModal from '@/components/LoginModal';
+// import OnboardingGuide from '@/components/OnboardingGuide';
+// import ResetOnboarding from '@/components/ResetOnboarding';
 
 type ToolCall = {
   tool: string;
@@ -643,8 +644,8 @@ export default function ChatPage() {
 
   return (
     <>
-    <OnboardingGuide />
-    <ResetOnboarding />
+    {/* <OnboardingGuide /> */}
+    {/* <ResetOnboarding /> */}
     <div id="chat-container" className="flex flex-col h-full">
       <div className="card p-4 mb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
