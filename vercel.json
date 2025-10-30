@@ -5,8 +5,16 @@
   "regions": ["sin1"],
   "functions": {
     "app/api/**/*.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     }
-  }
+  },
+  "outputFileTracing": true,
+  "excludeFiles": [
+    "node_modules/playwright/**",
+    "node_modules/canvas/**",
+    "node_modules/@pinecone-database/**",
+    "node_modules/chartjs-node-canvas/**"
+  ]
 }
 
