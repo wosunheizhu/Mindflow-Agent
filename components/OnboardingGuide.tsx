@@ -38,17 +38,40 @@ export default function OnboardingGuide() {
   const [isVisible, setIsVisible] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const updateTargetPosition = () => {
+    const targetId = steps[currentStep]?.targetId;
+    if (!targetId) return;
+    
+    const element = document.getElementById(targetId);
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      setTargetRect(rect);
+      setRetryCount(0);
+      
+      // 滚动到目标元素
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } else {
+      console.warn(`引导目标元素未找到: ${targetId}, 重试次数: ${retryCount}`);
+      // 如果找不到元素且重试次数小于5次，延迟重试
+      if (retryCount < 5) {
+        setTimeout(() => {
+          setRetryCount(prev => prev + 1);
+        }, 500);
+      }
+    }
+  };
 
   useEffect(() => {
     // 检查是否已经看过引导
     const hasSeenGuide = localStorage.getItem('hasSeenOnboarding');
     
     if (!hasSeenGuide) {
-      // 延迟1秒显示引导，等待页面完全加载
+      // 延迟2秒显示引导，等待页面完全加载和元素渲染
       const timer = setTimeout(() => {
         setIsVisible(true);
-        updateTargetPosition();
-      }, 1000);
+      }, 2000);
       
       return () => clearTimeout(timer);
     }
@@ -59,24 +82,11 @@ export default function OnboardingGuide() {
       updateTargetPosition();
       
       // 监听窗口大小变化
-      window.addEventListener('resize', updateTargetPosition);
-      return () => window.removeEventListener('resize', updateTargetPosition);
+      const handleResize = () => updateTargetPosition();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
     }
-  }, [isVisible, currentStep]);
-
-  const updateTargetPosition = () => {
-    const targetId = steps[currentStep]?.targetId;
-    if (!targetId) return;
-    
-    const element = document.getElementById(targetId);
-    if (element) {
-      const rect = element.getBoundingClientRect();
-      setTargetRect(rect);
-      
-      // 滚动到目标元素
-      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  };
+  }, [isVisible, currentStep, retryCount]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {

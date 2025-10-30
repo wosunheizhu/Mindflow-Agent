@@ -57,7 +57,9 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
           <div className="container-app grid grid-cols-12 gap-4 py-4" style={{ height: 'calc(100vh - 4rem)' }}>
             <aside className="col-span-12 md:col-span-3 lg:col-span-2">
               <SideNav activePath={pathname} />
-              <AvatarDisplay isExpanded={false} onExpandChange={handleExpandChange} />
+              <div id="avatar-chat">
+                <AvatarDisplay isExpanded={false} onExpandChange={handleExpandChange} />
+              </div>
             </aside>
             
             <main className="col-span-12 md:col-span-9 lg:col-span-10 flex flex-col overflow-hidden">
