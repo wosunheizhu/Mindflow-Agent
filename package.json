@@ -26,6 +26,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.65.0",
     "react-hot-toast": "^2.6.0",
+    "react-is": "^18.3.1",
     "react-json-view": "^1.21.3",
     "reactflow": "^11.11.4",
     "recharts": "^3.3.0",

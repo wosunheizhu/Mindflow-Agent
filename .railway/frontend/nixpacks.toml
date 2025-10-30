@@ -1,0 +1,19 @@
+# Nixpacks 配置 - 明确指定这是 Next.js 前端项目
+[phases.setup]
+nixPkgs = ["nodejs_18"]
+
+[phases.install]
+cmds = [
+  "npm install -g pnpm",
+  "pnpm install --frozen-lockfile"
+]
+
+[phases.build]
+cmds = ["pnpm run build"]
+
+[start]
+cmd = "pnpm start"
+
+[variables]
+NODE_ENV = "production"
+
