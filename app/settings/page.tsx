@@ -56,36 +56,40 @@ export default function Settings() {
 
   return (
     <div className="relative">
-      {/* 未登录遮罩层 */}
+      {/* 未登录遮罩层 - 只覆盖内容区域 */}
       {!isLoggedIn && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 border-2 border-blue-500">
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
-                <Lock size={32} className="text-blue-600 dark:text-blue-400" />
+        <>
+          {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
+          <div className="absolute inset-0 z-40 bg-black/70 flex items-center justify-center rounded-lg">
+            {/* 提示卡片 */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md mx-4 border-2 border-blue-500">
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-4">
+                  <Lock size={32} className="text-blue-600 dark:text-blue-400" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
+                  需要登录
+                </h2>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  设置功能需要登录后才能访问
+                </p>
+                <button
+                  onClick={() => {
+                    setShowLoginPrompt(false);
+                    setShowLogin(true);
+                  }}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg font-medium"
+                >
+                  立即登录
+                </button>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">
-                需要登录
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                设置功能需要登录后才能访问
-              </p>
-              <button
-                onClick={() => {
-                  setShowLoginPrompt(false);
-                  setShowLogin(true);
-                }}
-                className="w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg hover:from-blue-600 hover:to-cyan-600 transition-all shadow-md hover:shadow-lg font-medium"
-              >
-                立即登录
-              </button>
             </div>
           </div>
-        </div>
+        </>
       )}
       
-      {/* 主内容（未登录时虚化） */}
-      <div className={`grid gap-3 ${!isLoggedIn ? 'blur-sm pointer-events-none' : ''}`}>
+      {/* 主内容（未登录时禁止交互，但不模糊） */}
+      <div className={`grid gap-3 ${!isLoggedIn ? 'pointer-events-none' : ''}`}>
       <div className="card p-4">
         <div className="text-lg font-semibold">AI 模型配置</div>
         <div className="text-xs text-gray-500 mt-1">
