@@ -128,30 +128,37 @@ export default function OnboardingGuide() {
     const padding = 20;
     let style: React.CSSProperties = {
       position: 'fixed',
-      zIndex: 10001,
-      maxWidth: '320px',
+      zIndex: 10002,
+      maxWidth: '360px',
+      minWidth: '300px',
     };
+
+    console.log(`🎯 [新手引导] 计算提示框位置，目标位置: ${step.position}`);
 
     switch (step.position) {
       case 'right':
         style.left = `${targetRect.right + padding}px`;
         style.top = `${targetRect.top + targetRect.height / 2}px`;
         style.transform = 'translateY(-50%)';
+        console.log(`🎯 [新手引导] 提示框位置(右侧):`, style);
         break;
       case 'left':
         style.right = `${window.innerWidth - targetRect.left + padding}px`;
         style.top = `${targetRect.top + targetRect.height / 2}px`;
         style.transform = 'translateY(-50%)';
+        console.log(`🎯 [新手引导] 提示框位置(左侧):`, style);
         break;
       case 'top':
         style.left = `${targetRect.left + targetRect.width / 2}px`;
         style.bottom = `${window.innerHeight - targetRect.top + padding}px`;
         style.transform = 'translateX(-50%)';
+        console.log(`🎯 [新手引导] 提示框位置(顶部):`, style);
         break;
       case 'bottom':
         style.left = `${targetRect.left + targetRect.width / 2}px`;
         style.top = `${targetRect.bottom + padding}px`;
         style.transform = 'translateX(-50%)';
+        console.log(`🎯 [新手引导] 提示框位置(底部):`, style);
         break;
     }
 
@@ -167,9 +174,8 @@ export default function OnboardingGuide() {
         style={{ 
           zIndex: 9999,
           top: 0,
-          height: `${targetRect.top - 8}px`
+          height: `${Math.max(0, targetRect.top - 8)}px`
         }}
-        onClick={handleSkip}
       />
       
       {/* 下方遮罩 */}
@@ -180,7 +186,6 @@ export default function OnboardingGuide() {
           top: `${targetRect.bottom + 8}px`,
           bottom: 0
         }}
-        onClick={handleSkip}
       />
       
       {/* 左侧遮罩 */}
@@ -190,10 +195,9 @@ export default function OnboardingGuide() {
           zIndex: 9999,
           left: 0,
           top: `${targetRect.top - 8}px`,
-          width: `${targetRect.left - 8}px`,
+          width: `${Math.max(0, targetRect.left - 8)}px`,
           height: `${targetRect.height + 16}px`
         }}
-        onClick={handleSkip}
       />
       
       {/* 右侧遮罩 */}
@@ -206,7 +210,6 @@ export default function OnboardingGuide() {
           right: 0,
           height: `${targetRect.height + 16}px`
         }}
-        onClick={handleSkip}
       />
 
       {/* 高亮边框 */}
@@ -223,8 +226,12 @@ export default function OnboardingGuide() {
 
       {/* 提示卡片 */}
       <div
-        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 border-2 border-blue-500 animate-slide-in"
-        style={getTooltipStyle()}
+        className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 border-2 border-blue-500"
+        style={{
+          ...getTooltipStyle(),
+          animation: 'slideIn 0.3s ease-out'
+        }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* 进度条 */}
         <div className="mb-4">
@@ -282,33 +289,31 @@ export default function OnboardingGuide() {
       </div>
 
       {/* 自定义动画 */}
-      <style jsx>{`
+      <style jsx global>{`
         @keyframes pulse-slow {
           0%, 100% {
             opacity: 1;
+            box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
           }
           50% {
-            opacity: 0.7;
+            opacity: 0.9;
+            box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
           }
         }
         
-        @keyframes slide-in {
+        @keyframes slideIn {
           from {
             opacity: 0;
-            transform: translateY(-50%) scale(0.95);
+            transform: scale(0.95);
           }
           to {
             opacity: 1;
-            transform: translateY(-50%) scale(1);
+            transform: scale(1);
           }
         }
         
         .animate-pulse-slow {
           animation: pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-        
-        .animate-slide-in {
-          animation: slide-in 0.3s ease-out;
         }
       `}</style>
     </>
