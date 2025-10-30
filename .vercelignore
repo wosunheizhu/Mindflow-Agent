@@ -1,63 +1,43 @@
-# Git（但不排除代码文件）
+# 只排除必要的文件，保留所有代码
+
+# Git
 .git/
 
-# pnpm（但不排除项目代码）
+# pnpm缓存
 .pnpm-store/
 
-# Python files
+# Python后端文件
+*.py
 venv_voice/
 __pycache__/
-*.py
-*.pyc
-*.pyo
-*.pyd
-voice_server.py
-llm_tts_stream.py
-doubao_tts_client.py
-xfyun_asr_client.py
-llm_client.py
 
-# Python requirements
-requirements.txt
-voice_requirements.txt
-
-# Logs
-*.log
-
-# Test files
-test-*.js
-test-*.html
-
-# Documentation
+# 文档（保留README）
 *.md
 !README.md
 
-# Uploads and outputs
+# 日志
+*.log
+
+# 测试文件
+test-*.js
+test-*.html
+
+# 临时和输出目录
 uploads/
 outputs/
 generated_files/
 reports/
 test-results/
-test-folder/
 
-# Large assets
-public/avatars/ChatGPT*.png
+# 开发配置
+.env
+.env*.local
 
-# Build cache
-.next/cache/
-
-# Railway and Docker files
+# Railway配置
 Dockerfile
-.dockerignore
 railway.json
 .railwayignore
 Procfile
 
-# Shell scripts
+# 脚本
 *.sh
-
-# Development
-.env
-.env.local
-.env*.local
-
