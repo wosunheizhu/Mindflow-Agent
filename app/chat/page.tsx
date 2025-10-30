@@ -648,7 +648,7 @@ export default function ChatPage() {
     <div id="chat-container" className="flex flex-col h-full">
       <div className="card p-4 mb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
-          <div>
+          <div id="chat-header">
             <div className="text-lg font-semibold">AI 对话</div>
             <div className="text-xs text-gray-500">与 AI 助手自由对话，它会自动调用工具完成任务</div>
           </div>

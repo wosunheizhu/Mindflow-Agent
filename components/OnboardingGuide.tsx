@@ -15,8 +15,8 @@ const steps: OnboardingStep[] = [
     id: 'step-1',
     title: 'Agentic AI 自主编排',
     description: 'Agentic AI具有自主编排工作流的能力，可以帮您完成复杂任务',
-    targetId: 'chat-container',
-    position: 'left' // 改为左侧，避免超出屏幕
+    targetId: 'chat-header',
+    position: 'bottom' // 提示卡片在标题下方
   },
   {
     id: 'step-2',
