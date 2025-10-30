@@ -1,4 +1,6 @@
 import { NextRequest } from "next/server";
+import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 
 // 动态导入AI服务
 const getAIService = () => {
@@ -11,7 +13,6 @@ const getAIService = () => {
       provider: 'ollama'
     };
   } else if (provider === 'claude') {
-    const Anthropic = require('@anthropic-ai/sdk');
     return {
       client: new Anthropic({
         apiKey: process.env.ANTHROPIC_API_KEY!,
@@ -26,10 +27,9 @@ const getAIService = () => {
       provider: 'doubao'
     };
   } else {
-    const OpenAI = require('openai');
     return {
       client: new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
+        apiKey: process.env.OPENAI_API_KEY!,
       }),
       provider: 'openai'
     };
@@ -81,7 +81,6 @@ export async function POST(req: NextRequest): Promise<Response> {
           provider: 'doubao'
         };
       } else if (modelProvider === 'gpt5-pro') {
-        const OpenAI = require('openai');
         aiService = {
           client: new OpenAI({
             apiKey: process.env.OPENAI_API_KEY!,
@@ -90,7 +89,6 @@ export async function POST(req: NextRequest): Promise<Response> {
           model: process.env.GPT5_PRO_MODEL || 'gpt-5' // Mindflow-Y-Pro 使用真正的 GPT-5 思考模型
         };
       } else if (modelProvider === 'gpt5-thinking') {
-        const OpenAI = require('openai');
         aiService = {
           client: new OpenAI({
             apiKey: process.env.OPENAI_API_KEY!,
@@ -99,7 +97,6 @@ export async function POST(req: NextRequest): Promise<Response> {
           model: process.env.GPT5_THINKING_MODEL || 'gpt-5' // Mindflow-Y 使用真正的 GPT-5 思考模型
         };
       } else if (modelProvider === 'gpt4-turbo') {
-        const OpenAI = require('openai');
         aiService = {
           client: new OpenAI({
             apiKey: process.env.OPENAI_API_KEY!,
@@ -108,7 +105,6 @@ export async function POST(req: NextRequest): Promise<Response> {
           model: 'gpt-4-turbo' // Mindflow-Y-Fast 使用 GPT-4 Turbo
         };
       } else {
-        const OpenAI = require('openai');
         aiService = {
           client: new OpenAI({
             apiKey: process.env.OPENAI_API_KEY!,
@@ -118,7 +114,13 @@ export async function POST(req: NextRequest): Promise<Response> {
       }
     } else {
       // 使用环境变量配置
-      aiService = getAIService();
+      const defaultService = getAIService();
+      if (!defaultService.client && defaultService.provider === 'openai') {
+        defaultService.client = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY!,
+        });
+      }
+      aiService = defaultService;
     }
     
     // 支持Ollama模式下的工具调用
