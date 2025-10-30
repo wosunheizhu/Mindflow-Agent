@@ -28,6 +28,36 @@ import { workflowManager } from "./workflow-manager";
 import { WorkflowEngine } from "./workflow-engine";
 import { planWorkflow, validateWorkflow } from "./workflow-planner";
 
+const resolveBaseUrl = (): string => {
+  const normalize = (url?: string | null): string | null => {
+    if (!url) return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+    return withProtocol.replace(/\/$/, "");
+  };
+
+  const candidates = [
+    process.env.NEXT_PUBLIC_APP_URL,
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.SITE_URL,
+    process.env.NEXT_PUBLIC_VERCEL_URL ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}` : null,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+    process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : null,
+    process.env.RAILWAY_STATIC_URL ? `https://${process.env.RAILWAY_STATIC_URL}` : null,
+    process.env.RAILWAY_URL,
+  ];
+
+  for (const candidate of candidates) {
+    const normalized = normalize(candidate);
+    if (normalized) {
+      return normalized;
+    }
+  }
+
+  return normalize(process.env.NODE_ENV === "development" ? "http://localhost:3000" : "https://localhost:3000")!;
+};
+
 // 文件存储（简单版本，生产环境应使用数据库）
 const uploadedFiles: Map<string, any> = new Map();
 
@@ -1268,7 +1298,7 @@ async function createDocumentTool(filename: string, content: string, format: str
 
     const token = await registerDownload(buffer, outFilename, mime);
     // 生成完整的可访问 URL（在生产环境中会使用实际域名）
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = resolveBaseUrl();
     const download_url = `${baseUrl}/api/download?token=${token}`;
 
     return {
@@ -1477,7 +1507,7 @@ async function createChartTool(chartType: string, labels: string[], values: numb
     const filename = `${chartType}_chart_${Date.now()}.html`;
     const token = await registerDownload(buffer, filename, 'text/html; charset=utf-8');
     // 生成完整的可访问 URL（在生产环境中会使用实际域名）
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const baseUrl = resolveBaseUrl();
     const download_url = `${baseUrl}/api/download?token=${token}`;
 
     return {
