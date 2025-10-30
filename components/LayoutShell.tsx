@@ -62,7 +62,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
               </div>
             </aside>
             
-            <main className="col-span-12 md:col-span-9 lg:col-span-10 flex flex-col overflow-hidden">
+            <main className="col-span-12 md:col-span-9 lg:col-span-10 flex flex-col overflow-y-auto">
               {children}
             </main>
           </div>

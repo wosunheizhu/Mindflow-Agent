@@ -7,7 +7,7 @@ const nextConfig = {
     VOICE_SERVER_URL: process.env.VOICE_SERVER_URL,
     NEXT_PUBLIC_VOICE_SERVER_URL: process.env.VOICE_SERVER_URL,
   },
-
+  
   // 图片域名白名单
   images: {
     domains: ['localhost'],

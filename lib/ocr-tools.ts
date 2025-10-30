@@ -40,10 +40,10 @@ export async function recognizeText(imagePath: string, lang: string = 'chi_sim+e
  * 从 PDF 扫描版提取文字（使用 OCR）
  */
 export async function extractTextFromScannedPDF(pdfPath: string): Promise<any> {
-  // 注意：完整实现需要将 PDF 转换为图片
-  return {
-    note: "PDF OCR 需要额外的图片转换步骤",
-    suggestion: "建议先将 PDF 页面导出为图片，然后使用图片 OCR",
-    text: "",
-  };
+    // 注意：完整实现需要将 PDF 转换为图片
+    return {
+      note: "PDF OCR 需要额外的图片转换步骤",
+      suggestion: "建议先将 PDF 页面导出为图片，然后使用图片 OCR",
+      text: "",
+    };
 }
