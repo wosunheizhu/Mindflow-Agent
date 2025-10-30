@@ -3,7 +3,15 @@
  * 使用 Playwright 实现网页自动化操作
  */
 
-import { chromium } from 'playwright';
+// 动态导入以避免Vercel构建错误
+let chromium: any = null;
+if (!process.env.VERCEL) {
+  try {
+    chromium = require('playwright').chromium;
+  } catch (e) {
+    console.warn('Playwright未安装或不可用');
+  }
+}
 
 /**
  * 访问网页并截图
