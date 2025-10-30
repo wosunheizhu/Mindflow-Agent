@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import JsonView from '@/components/JsonView';
 import LoginPrompt from '@/components/LoginPrompt';
 import LoginModal from '@/components/LoginModal';
+import OnboardingGuide from '@/components/OnboardingGuide';
+import ResetOnboarding from '@/components/ResetOnboarding';
 
 type ToolCall = {
   tool: string;
@@ -640,7 +642,10 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <>
+    <OnboardingGuide />
+    <ResetOnboarding />
+    <div id="chat-container" className="flex flex-col h-full">
       <div className="card p-4 mb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <div>
@@ -936,6 +941,7 @@ export default function ChatPage() {
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
 
           <button
+            id="avatar-toggle"
             onClick={() => setAvatarEnabled(!avatarEnabled)}
             className={`btn-ghost text-sm ${avatarEnabled ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : ''}`}
             title="语音数字员工（AI语音总结播报）"
@@ -1006,6 +1012,7 @@ export default function ChatPage() {
       {/* 登录弹窗 */}
       <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
+    </>
   );
 }
 
