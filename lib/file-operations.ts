@@ -65,7 +65,9 @@ export async function listDirectory(dirPath: string = 'uploads'): Promise<any> {
  */
 export async function createDirectory(dirPath: string): Promise<string> {
   try {
-    const fullPath = path.join(process.cwd(), dirPath);
+    // Vercel环境在/tmp下创建，本地环境在项目目录创建
+    const baseDir = process.env.VERCEL ? '/tmp' : process.cwd();
+    const fullPath = path.join(baseDir, dirPath);
     await mkdir(fullPath, { recursive: true });
     return fullPath;
   } catch (error: any) {

@@ -8,7 +8,8 @@ import path from "path";
 import { existsSync } from "fs";
 
 // 工作区状态
-let currentWorkspace: string = process.cwd();
+// Vercel环境使用/tmp，本地环境使用项目目录
+let currentWorkspace: string = process.env.VERCEL ? '/tmp' : process.cwd();
 let workspaceFiles: Map<string, any> = new Map();
 
 /**
@@ -16,9 +17,11 @@ let workspaceFiles: Map<string, any> = new Map();
  */
 export async function setWorkspace(workspacePath: string): Promise<any> {
   try {
+    // Vercel环境下，工作区基于/tmp目录
+    const baseDir = process.env.VERCEL ? '/tmp' : process.cwd();
     const fullPath = path.isAbsolute(workspacePath) 
       ? workspacePath 
-      : path.join(process.cwd(), workspacePath);
+      : path.join(baseDir, workspacePath);
 
     if (!existsSync(fullPath)) {
       return {
