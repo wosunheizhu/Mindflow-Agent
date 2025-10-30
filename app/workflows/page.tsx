@@ -1,11 +1,9 @@
 'use client';
 import { useState, useCallback, useEffect } from 'react';
-import { Search, Code2, FileText, BarChart3, Globe, Play, Save, Plus, Trash2, Download, Upload, Lock } from 'lucide-react';
+import { Search, Code2, FileText, BarChart3, Globe, Play, Save, Plus, Trash2, Download, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import 'reactflow/dist/style.css';
-import LoginPrompt from '@/components/LoginPrompt';
-import LoginModal from '@/components/LoginModal';
 
 const ReactFlow = dynamic(() => import('reactflow'), { ssr: false });
 const Background = dynamic(() => import('reactflow').then(m => m.Background), { ssr: false });
@@ -53,26 +51,12 @@ export default function WorkflowsPage() {
   const [workflowName, setWorkflowName] = useState('我的工作流');
   const [reactFlowInstance, setReactFlowInstance] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    // 检查登录状态
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    setIsLoggedIn(loggedIn);
   }, []);
-  
-  // 检查是否需要登录
-  const requireLogin = () => {
-    setShowLoginPrompt(true);
-    return false;
-  };
 
   const addNode = (type: any) => {
-    if (requireLogin()) return;
-    
     const newNode = {
       id: `n${Date.now()}`,
       position: { 
@@ -94,8 +78,6 @@ export default function WorkflowsPage() {
   };
 
   const deleteNode = () => {
-    if (requireLogin()) return;
-    
     if (!selectedNode) {
       toast.error('请先选择一个节点');
       return;
@@ -107,8 +89,6 @@ export default function WorkflowsPage() {
   };
 
   const runWorkflow = async () => {
-    if (requireLogin()) return;
-    
     if (nodes.length === 0) {
       toast.error('工作流为空');
       return;
@@ -123,8 +103,6 @@ export default function WorkflowsPage() {
   };
 
   const saveWorkflow = () => {
-    if (requireLogin()) return;
-    
     const workflow = {
       name: workflowName,
       nodes: nodes,
@@ -136,8 +114,6 @@ export default function WorkflowsPage() {
   };
 
   const loadWorkflow = () => {
-    if (requireLogin()) return;
-    
     const saved = localStorage.getItem('saved-workflow');
     if (saved) {
       const workflow = JSON.parse(saved);
@@ -151,8 +127,6 @@ export default function WorkflowsPage() {
   };
 
   const exportWorkflow = () => {
-    if (requireLogin()) return;
-    
     const workflow = {
       name: workflowName,
       nodes: nodes,
@@ -214,52 +188,7 @@ export default function WorkflowsPage() {
   }, []);
 
   return (
-    <div className="relative">
-      {/* 未登录遮罩层 - 只覆盖内容区域 */}
-      {!isLoggedIn && (
-        <>
-          {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
-          <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center rounded-lg" style={{ minHeight: '400px' }}>
-            {/* 提示卡片 - 照搬LoginPrompt样式 */}
-            <div className="w-full max-w-sm mx-4 bg-white dark:bg-[rgb(22,23,24)] rounded-xl border border-border dark:border-border-dark shadow-2xl">
-              {/* 头部 */}
-              <div className="flex items-center justify-between p-4 border-b border-border dark:border-border-dark">
-                <div className="text-base font-semibold">需要登录</div>
-              </div>
-
-              {/* 内容 */}
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-6 h-6 text-blue-600 dark:text-blue-400">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                    </svg>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    此功能需要登录内测账号才能使用
-                  </p>
-                </div>
-
-                <button 
-                  onClick={() => {
-                    setShowLoginPrompt(false);
-                    setShowLogin(true);
-                  }}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all hover:shadow-lg hover:scale-105"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Lock size={20} className="text-blue-600 dark:text-blue-400" />
-                    <div className="font-semibold">登录</div>
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
-      
-      {/* 主内容（未登录时禁止交互，但不模糊） */}
-      <div className={`grid gap-4 ${!isLoggedIn ? 'pointer-events-none' : ''}`}>
+    <div className="grid gap-4">
       {/* 顶部工具栏 */}
       <div className="card p-4">
         <div className="flex items-center justify-between">
@@ -405,20 +334,6 @@ export default function WorkflowsPage() {
           <div>· 点击"运行"执行工作流（演示）</div>
         </div>
       </div>
-
-      {/* 登录提示 */}
-      <LoginPrompt 
-        isOpen={showLoginPrompt} 
-        onClose={() => setShowLoginPrompt(false)}
-        onLogin={() => {
-          setShowLoginPrompt(false);
-          setShowLogin(true);
-        }}
-      />
-    </div>
-
-      {/* 登录弹窗 */}
-      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }

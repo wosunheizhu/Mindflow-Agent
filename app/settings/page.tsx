@@ -1,8 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import LoginPrompt from '@/components/LoginPrompt';
-import LoginModal from '@/components/LoginModal';
-import { Lock } from 'lucide-react';
 
 type KeyItem = { key: string; label: string; placeholder?: string; type?: string; options?: {label: string, value: string}[] };
 
@@ -27,15 +24,8 @@ const ITEMS: KeyItem[] = [
 export default function Settings() {
   const [values, setValues] = useState<Record<string,string>>({});
   const [aiProvider, setAiProvider] = useState('ollama');
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
-    // 检查登录状态
-    const loggedIn = localStorage.getItem('isLoggedIn') === 'true';
-    setIsLoggedIn(loggedIn);
-    
     const saved = localStorage.getItem('ai-assistant-keys');
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -55,50 +45,7 @@ export default function Settings() {
   };
 
   return (
-    <div className="relative">
-      {/* 未登录遮罩层 - 只覆盖内容区域 */}
-      {!isLoggedIn && (
-        <>
-          {/* 遮罩层 - 只覆盖主内容，不覆盖侧边栏 */}
-          <div className="absolute inset-0 z-40 bg-black/50 flex items-center justify-center rounded-lg">
-            {/* 提示卡片 - 照搬LoginPrompt样式 */}
-            <div className="w-full max-w-sm mx-4 bg-white dark:bg-[rgb(22,23,24)] rounded-xl border border-border dark:border-border-dark shadow-2xl">
-              {/* 头部 */}
-              <div className="flex items-center justify-between p-4 border-b border-border dark:border-border-dark">
-                <div className="text-base font-semibold">需要登录</div>
-              </div>
-
-              {/* 内容 */}
-              <div className="p-6">
-                <div className="text-center mb-6">
-                  <div className="mx-auto w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mb-3">
-                    <Lock size={24} className="text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    此功能需要登录内测账号才能使用
-                  </p>
-                </div>
-
-                <button 
-                  onClick={() => {
-                    setShowLoginPrompt(false);
-                    setShowLogin(true);
-                  }}
-                  className="w-full p-4 border-2 border-gray-200 dark:border-gray-700 rounded-lg hover:border-blue-400 dark:hover:border-blue-600 transition-all hover:shadow-lg hover:scale-105"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <Lock size={20} className="text-blue-600 dark:text-blue-400" />
-                    <div className="font-semibold">登录</div>
-                  </div>
-                </button>
-              </div>
-        </div>
-      </div>
-        </>
-      )}
-      
-      {/* 主内容（未登录时禁止交互，但不模糊） */}
-      <div className={`grid gap-3 ${!isLoggedIn ? 'pointer-events-none' : ''}`}>
+    <div className="grid gap-3">
 
       {/* AI 服务选择 */}
       <div className="card p-4">
@@ -207,9 +154,6 @@ export default function Settings() {
         </div>
       </div>
     </div>
-    
-    {/* 登录弹窗 */}
-    <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }
