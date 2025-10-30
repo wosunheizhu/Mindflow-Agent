@@ -1,0 +1,10 @@
+# Railway 前端服务配置
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile.frontend"
+watchPatterns = ["**"]
+
+[deploy]
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 10
+

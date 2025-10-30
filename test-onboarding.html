@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>测试新手引导</title>
+  <script>
+    // 清除localStorage中的引导记录
+    localStorage.removeItem('hasSeenOnboarding');
+    // 立即跳转到聊天页面
+    window.location.href = 'http://localhost:3000/chat';
+  </script>
+</head>
+<body>
+  <p>正在跳转到聊天页面并触发新手引导...</p>
+</body>
+</html>
