@@ -14,23 +14,12 @@ const nextConfig = {
     unoptimized: process.env.NODE_ENV === 'development',
   },
 
-  // 排除大包不打包到serverless函数中
-  experimental: {
-    serverComponentsExternalPackages: ['playwright', 'playwright-core', 'tesseract.js'],
-  },
-
   webpack: (config) => {
     config.resolve = config.resolve || {};
     config.resolve.alias = {
       ...(config.resolve.alias || {}),
       '@': path.resolve(process.cwd()),
     };
-    
-    // 标记为外部依赖，不打包
-    if (config.externals) {
-      config.externals.push('playwright', 'playwright-core', 'tesseract.js');
-    }
-    
     return config;
   },
 };
