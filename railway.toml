@@ -1,9 +1,7 @@
-# Railway 前端服务配置
+# 简化的 Railway 配置 - 使用 Nixpacks 自动检测
 [build]
-builder = "dockerfile"
-dockerfilePath = "Dockerfile.frontend"
+builder = "NIXPACKS"
 
 [deploy]
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 10
-
