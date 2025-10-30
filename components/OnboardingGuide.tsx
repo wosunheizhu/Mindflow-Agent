@@ -44,16 +44,23 @@ export default function OnboardingGuide() {
     const targetId = steps[currentStep]?.targetId;
     if (!targetId) return;
     
+    console.log(`🎯 [新手引导] 步骤${currentStep + 1}: 查找元素 #${targetId}`);
     const element = document.getElementById(targetId);
     if (element) {
       const rect = element.getBoundingClientRect();
+      console.log(`🎯 [新手引导] 找到元素，位置:`, {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height
+      });
       setTargetRect(rect);
       setRetryCount(0);
       
       // 滚动到目标元素
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } else {
-      console.warn(`引导目标元素未找到: ${targetId}, 重试次数: ${retryCount}`);
+      console.warn(`🎯 [新手引导] 元素未找到: #${targetId}, 重试次数: ${retryCount}`);
       // 如果找不到元素且重试次数小于5次，延迟重试
       if (retryCount < 5) {
         setTimeout(() => {
@@ -67,13 +74,19 @@ export default function OnboardingGuide() {
     // 检查是否已经看过引导
     const hasSeenGuide = localStorage.getItem('hasSeenOnboarding');
     
+    console.log('🎯 [新手引导] 检查引导状态:', hasSeenGuide);
+    
     if (!hasSeenGuide) {
+      console.log('🎯 [新手引导] 首次访问，将在2秒后显示引导');
       // 延迟2秒显示引导，等待页面完全加载和元素渲染
       const timer = setTimeout(() => {
+        console.log('🎯 [新手引导] 开始显示引导');
         setIsVisible(true);
       }, 2000);
       
       return () => clearTimeout(timer);
+    } else {
+      console.log('🎯 [新手引导] 已看过引导，不再显示');
     }
   }, []);
 
@@ -147,16 +160,58 @@ export default function OnboardingGuide() {
 
   return (
     <>
-      {/* 遮罩层 - 让其他区域变暗 */}
+      {/* 四块遮罩层 - 镂空效果，只让高亮区域清晰 */}
+      {/* 上方遮罩 */}
       <div 
-        className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        style={{ zIndex: 9999 }}
+        className="fixed left-0 right-0 bg-black/70 backdrop-blur-sm transition-all duration-500"
+        style={{ 
+          zIndex: 9999,
+          top: 0,
+          height: `${targetRect.top - 8}px`
+        }}
+        onClick={handleSkip}
+      />
+      
+      {/* 下方遮罩 */}
+      <div 
+        className="fixed left-0 right-0 bg-black/70 backdrop-blur-sm transition-all duration-500"
+        style={{ 
+          zIndex: 9999,
+          top: `${targetRect.bottom + 8}px`,
+          bottom: 0
+        }}
+        onClick={handleSkip}
+      />
+      
+      {/* 左侧遮罩 */}
+      <div 
+        className="fixed bg-black/70 backdrop-blur-sm transition-all duration-500"
+        style={{ 
+          zIndex: 9999,
+          left: 0,
+          top: `${targetRect.top - 8}px`,
+          width: `${targetRect.left - 8}px`,
+          height: `${targetRect.height + 16}px`
+        }}
+        onClick={handleSkip}
+      />
+      
+      {/* 右侧遮罩 */}
+      <div 
+        className="fixed bg-black/70 backdrop-blur-sm transition-all duration-500"
+        style={{ 
+          zIndex: 9999,
+          left: `${targetRect.right + 8}px`,
+          top: `${targetRect.top - 8}px`,
+          right: 0,
+          height: `${targetRect.height + 16}px`
+        }}
         onClick={handleSkip}
       />
 
-      {/* 高亮区域 - 镂空效果 */}
+      {/* 高亮边框 */}
       <div
-        className="fixed border-4 border-blue-500 rounded-lg shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] pointer-events-none transition-all duration-500 animate-pulse-slow"
+        className="fixed border-4 border-blue-500 rounded-lg pointer-events-none transition-all duration-500 animate-pulse-slow"
         style={{
           zIndex: 10000,
           left: `${targetRect.left - 8}px`,
