@@ -8,9 +8,6 @@ const nextConfig = {
     NEXT_PUBLIC_VOICE_SERVER_URL: process.env.VOICE_SERVER_URL,
   },
 
-  // 生产环境优化
-  swcMinify: true,
-
   // 图片域名白名单
   images: {
     domains: ['localhost'],
