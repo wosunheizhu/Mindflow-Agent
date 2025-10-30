@@ -16,21 +16,21 @@ const steps: OnboardingStep[] = [
     title: 'Agentic AI 自主编排',
     description: 'Agentic AI具有自主编排工作流的能力，可以帮您完成复杂任务',
     targetId: 'chat-container',
-    position: 'right'
+    position: 'left' // 改为左侧，避免超出屏幕
   },
   {
     id: 'step-2',
     title: '数字员工对话',
     description: '向吩咐真人一样和数字员工对话，让她帮您使用Agentic AI',
     targetId: 'avatar-chat',
-    position: 'left'
+    position: 'right' // 改为右侧
   },
   {
     id: 'step-3',
     title: '智能总结开关',
     description: '开启时数字员工会帮您简短的，通俗易懂的总结Agentic AI的回答',
     targetId: 'avatar-toggle',
-    position: 'top'
+    position: 'bottom' // 改为下方，避免超出屏幕上方
   }
 ];
 
@@ -77,12 +77,12 @@ export default function OnboardingGuide() {
     console.log('🎯 [新手引导] 检查引导状态:', hasSeenGuide);
     
     if (!hasSeenGuide) {
-      console.log('🎯 [新手引导] 首次访问，将在2秒后显示引导');
-      // 延迟2秒显示引导，等待页面完全加载和元素渲染
+      console.log('🎯 [新手引导] 首次访问，立即显示引导');
+      // 短暂延迟等待元素渲染完成
       const timer = setTimeout(() => {
         console.log('🎯 [新手引导] 开始显示引导');
         setIsVisible(true);
-      }, 2000);
+      }, 300);
       
       return () => clearTimeout(timer);
     } else {
