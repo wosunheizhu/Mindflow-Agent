@@ -12,13 +12,17 @@ type ChatMessage = {
   reasoningContent?: string; // 推理过程
 };
 
-// 清理文本：去除括号及其内容（前端也过滤，双重保障）
+// 清理文本：去除括号及其内容、数字员工名字前缀（前端也过滤，双重保障）
 function cleanTextForDisplay(text: string): string {
+  // 去除数字员工名字前缀（小岚：、小远：、小岚 、小远 ）
+  let cleaned = text.replace(/^(小岚|小远)[：:：\s]+/g, '');
+  
   // 去除所有括号及其内容
-  let cleaned = text.replace(/[（(].*?[）)]/g, '');
+  cleaned = cleaned.replace(/[（(].*?[）)]/g, '');
   cleaned = cleaned.replace(/[\[【].*?[\]】]/g, '');
   cleaned = cleaned.replace(/[「『].*?[」』]/g, '');
   cleaned = cleaned.replace(/[<].*?[>]/g, '');
+  
   // 去除多余空格和换行
   cleaned = cleaned.replace(/\s+/g, ' ').trim();
   return cleaned;
