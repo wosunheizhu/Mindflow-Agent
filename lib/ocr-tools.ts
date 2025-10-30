@@ -3,13 +3,31 @@
  * 使用 Tesseract.js 识别图片和 PDF 中的文字
  */
 
-import { createWorker } from 'tesseract.js';
+// 动态导入以避免Vercel构建错误
+let createWorker: any = null;
+if (!process.env.VERCEL) {
+  try {
+    const tesseract = require('tesseract.js');
+    createWorker = tesseract.createWorker;
+  } catch (e) {
+    console.warn('Tesseract.js未安装或不可用');
+  }
+}
 import { readFile } from 'fs/promises';
 
 /**
  * 识别图片中的文字
  */
 export async function recognizeText(imagePath: string, lang: string = 'chi_sim+eng'): Promise<any> {
+  // Vercel环境禁用OCR功能
+  if (process.env.VERCEL) {
+    throw new Error('OCR识别功能在生产环境不可用，请在本地环境使用或使用在线OCR服务');
+  }
+  
+  if (!createWorker) {
+    throw new Error('Tesseract.js未安装');
+  }
+  
   try {
     const worker = await createWorker(lang);
     
