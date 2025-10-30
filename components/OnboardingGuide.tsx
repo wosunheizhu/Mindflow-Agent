@@ -123,45 +123,100 @@ export default function OnboardingGuide() {
   const step = steps[currentStep];
   const progress = ((currentStep + 1) / steps.length) * 100;
 
-  // 计算提示框位置
+  // 计算提示框位置（确保在屏幕可见范围内）
   const getTooltipStyle = () => {
     const padding = 20;
+    const tooltipWidth = 360;
+    const tooltipHeight = 300; // 预估高度
+    
     let style: React.CSSProperties = {
       position: 'fixed',
       zIndex: 10002,
-      maxWidth: '360px',
-      minWidth: '300px',
+      width: `${tooltipWidth}px`,
     };
 
     console.log(`🎯 [新手引导] 计算提示框位置，目标位置: ${step.position}`);
+    console.log(`🎯 [新手引导] 窗口大小:`, { width: window.innerWidth, height: window.innerHeight });
+    console.log(`🎯 [新手引导] 目标区域:`, targetRect);
+
+    let left = 0;
+    let top = 0;
 
     switch (step.position) {
       case 'right':
-        style.left = `${targetRect.right + padding}px`;
-        style.top = `${targetRect.top + targetRect.height / 2}px`;
-        style.transform = 'translateY(-50%)';
-        console.log(`🎯 [新手引导] 提示框位置(右侧):`, style);
+        // 尝试放在右侧
+        left = targetRect.right + padding;
+        top = targetRect.top + targetRect.height / 2 - tooltipHeight / 2;
+        
+        // 如果超出右边界，放在左侧
+        if (left + tooltipWidth > window.innerWidth - padding) {
+          left = targetRect.left - tooltipWidth - padding;
+          console.log(`🎯 [新手引导] 右侧空间不足，改为左侧`);
+        }
+        
+        // 确保不超出上下边界
+        top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding));
+        
+        style.left = `${left}px`;
+        style.top = `${top}px`;
         break;
+        
       case 'left':
-        style.right = `${window.innerWidth - targetRect.left + padding}px`;
-        style.top = `${targetRect.top + targetRect.height / 2}px`;
-        style.transform = 'translateY(-50%)';
-        console.log(`🎯 [新手引导] 提示框位置(左侧):`, style);
+        // 放在左侧
+        left = targetRect.left - tooltipWidth - padding;
+        top = targetRect.top + targetRect.height / 2 - tooltipHeight / 2;
+        
+        // 如果超出左边界，放在右侧
+        if (left < padding) {
+          left = targetRect.right + padding;
+          console.log(`🎯 [新手引导] 左侧空间不足，改为右侧`);
+        }
+        
+        // 确保不超出上下边界
+        top = Math.max(padding, Math.min(top, window.innerHeight - tooltipHeight - padding));
+        
+        style.left = `${left}px`;
+        style.top = `${top}px`;
         break;
+        
       case 'top':
-        style.left = `${targetRect.left + targetRect.width / 2}px`;
-        style.bottom = `${window.innerHeight - targetRect.top + padding}px`;
-        style.transform = 'translateX(-50%)';
-        console.log(`🎯 [新手引导] 提示框位置(顶部):`, style);
+        // 放在上方
+        left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
+        top = targetRect.top - tooltipHeight - padding;
+        
+        // 如果超出上边界，放在下方
+        if (top < padding) {
+          top = targetRect.bottom + padding;
+          console.log(`🎯 [新手引导] 上方空间不足，改为下方`);
+        }
+        
+        // 确保不超出左右边界
+        left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding));
+        
+        style.left = `${left}px`;
+        style.top = `${top}px`;
         break;
+        
       case 'bottom':
-        style.left = `${targetRect.left + targetRect.width / 2}px`;
-        style.top = `${targetRect.bottom + padding}px`;
-        style.transform = 'translateX(-50%)';
-        console.log(`🎯 [新手引导] 提示框位置(底部):`, style);
+        // 放在下方
+        left = targetRect.left + targetRect.width / 2 - tooltipWidth / 2;
+        top = targetRect.bottom + padding;
+        
+        // 如果超出下边界，放在上方
+        if (top + tooltipHeight > window.innerHeight - padding) {
+          top = targetRect.top - tooltipHeight - padding;
+          console.log(`🎯 [新手引导] 下方空间不足，改为上方`);
+        }
+        
+        // 确保不超出左右边界
+        left = Math.max(padding, Math.min(left, window.innerWidth - tooltipWidth - padding));
+        
+        style.left = `${left}px`;
+        style.top = `${top}px`;
         break;
     }
 
+    console.log(`🎯 [新手引导] 最终提示框位置:`, style);
     return style;
   };
 
