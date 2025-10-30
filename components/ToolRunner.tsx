@@ -46,8 +46,8 @@ export default function ToolRunner({ toolId }: Props) {
           const mode = values.mode;
           if (mode === 'json2csv') {
             const arr = JSON.parse(values.content);
-            const keys = [...new Set(arr.flatMap((o: any) => Object.keys(o)))];
-            const csv = [keys.join(','), ...arr.map((o: any) => keys.map(k => JSON.stringify(o[k] ?? '')).join(','))].join('\n');
+            const keys = [...new Set(arr.flatMap((o: any) => Object.keys(o)))] as string[];
+            const csv = [keys.join(','), ...arr.map((o: any) => keys.map((k: string) => JSON.stringify(o[k] ?? '')).join(','))].join('\n');
             downloadTextFile(`converted_${Date.now()}.csv`, csv);
             setResult({ ok: true, lines: arr.length });
           } else {

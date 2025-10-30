@@ -51,7 +51,7 @@ function convertToolsForClaude(openaiTools: any[]) {
   }));
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { messages, useTools = true, deepThinking = false, browserSearch = false, avatarEnabled = false, avatarVoice = 'zh_female_sajiaonvyou_moon_bigtts', modelProvider, hasFiles = false } = await req.json();
     
@@ -456,9 +456,11 @@ export async function POST(req: NextRequest) {
                   
                   // 执行工具调用
                   let toolResults = '';
-                  for (const match of toolMatches) {
-                    const toolName = match[1];
-                    const argsStr = match[2];
+                  for (const matchResult of toolMatches) {
+                    const match = matchResult as RegExpMatchArray;
+                    if (!match[1] || !match[2]) continue;
+                    const toolName = String(match[1]);
+                    const argsStr = String(match[2]);
                     
                     try {
                       const toolArgs = JSON.parse(argsStr);
@@ -595,9 +597,11 @@ export async function POST(req: NextRequest) {
                   
                   // 执行工具调用
                   let toolResults = '';
-                  for (const match of toolMatches) {
-                    const toolName = match[1];
-                    const argsStr = match[2];
+                  for (const matchResult of toolMatches) {
+                    const match = matchResult as RegExpMatchArray;
+                    if (!match[1] || !match[2]) continue;
+                    const toolName = String(match[1]);
+                    const argsStr = String(match[2]);
                     
                     try {
                       const toolArgs = JSON.parse(argsStr);

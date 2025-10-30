@@ -4,7 +4,7 @@ import { consumeDownload } from "../../../lib/download-registry";
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-export async function GET(req: NextRequest) {
+export async function GET(req: NextRequest): Promise<Response> {
   const { searchParams } = new URL(req.url);
   const token = searchParams.get('token') || '';
   if (!token) {
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     return new Response('Invalid or expired token', { status: 404 });
   }
 
-  return new Response(item.data, {
+  return new Response(Buffer.isBuffer(item.data) ? new Uint8Array(item.data) : item.data, {
     status: 200,
     headers: {
       'Content-Type': item.mime,

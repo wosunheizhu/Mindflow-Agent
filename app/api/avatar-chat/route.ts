@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { message, voice = 'zh_female_sajiaonvyou_moon_bigtts' } = await req.json();
 

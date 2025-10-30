@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
  * 科大讯飞ASR - 语音识别
  * 基于xfyun_asr_client.py实现
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<Response> {
   try {
     const { audioBase64 } = await req.json();
 
