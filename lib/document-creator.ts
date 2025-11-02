@@ -191,26 +191,46 @@ export async function createExcel(filename: string, data: any[][], sheetName: st
 }
 
 /**
- * 创建 PDF 文档（使用 Puppeteer，支持 Vercel 环境）
+ * 创建 PDF 文档（临时降级为 HTML，可在浏览器中打印为 PDF）
  */
 export async function createPDF(filename: string, content: string): Promise<string> {
   try {
-    const puppeteer = require('puppeteer');
-    const chromium = require('@sparticuz/chromium-min');
+    console.log('⚠️ PDF 生成暂时降级为 HTML 格式（可在浏览器中打印为 PDF）');
     
-    const pdfFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+    // 临时方案：生成可打印的 HTML 文件，用户可以在浏览器中 Ctrl+P 打印为 PDF
+    // Puppeteer 在 Vercel 上配置复杂且容易超时，使用这个简单方案
     
-    // 1. 将 Markdown 转换为带样式的 HTML
+    // 将 .pdf 改为 .html
+    const htmlFilename = filename.replace(/\.pdf$/i, '.html');
+    
+    // 生成可打印的 HTML
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
+  <title>${htmlFilename}</title>
   <style>
+    @media print {
+      body { margin: 0; }
+      .no-print { display: none; }
+    }
     body { 
       font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; 
       margin: 40px; 
       line-height: 1.8; 
       color: #333;
+    }
+    .no-print {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #3b82f6;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     h1 { 
       color: #1e3a8a; 
@@ -246,13 +266,10 @@ export async function createPDF(filename: string, content: string): Promise<stri
       color: #1e40af; 
       font-weight: 600;
     }
-    em {
-      font-style: italic;
-      color: #4b5563;
-    }
   </style>
 </head>
 <body>
+  <button class="no-print" onclick="window.print()">🖨️ 打印为 PDF</button>
 ${content
   .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
   .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
@@ -267,52 +284,17 @@ ${content
 </body>
 </html>`;
     
-    // 2. 启动 Puppeteer
-    let browser;
-    try {
-      browser = await puppeteer.launch({
-        args: process.env.VERCEL 
-          ? [...chromium.args, '--hide-scrollbars', '--disable-web-security']
-          : ['--no-sandbox', '--disable-setuid-sandbox'],
-        defaultViewport: chromium.defaultViewport,
-        executablePath: process.env.VERCEL 
-          ? await chromium.executablePath('/tmp/chromium')
-          : undefined,
-        headless: true,
-      });
-      
-      const page = await browser.newPage();
-      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-      
-      // 3. 生成 PDF
-      const pdfBuffer = await page.pdf({
-        format: 'A4',
-        margin: {
-          top: '20mm',
-          right: '20mm',
-          bottom: '20mm',
-          left: '20mm',
-        },
-        printBackground: true,
-      });
-      
-      await browser.close();
-      
-      // 4. 保存文件
-      const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
-      if (!existsSync(outputDir) && !process.env.VERCEL) {
-        await mkdir(outputDir, { recursive: true });
-      }
-      
-      const filepath = path.join(outputDir, pdfFilename);
-      await writeFile(filepath, pdfBuffer);
-      
-      console.log(`✅ PDF 文档创建成功: ${pdfFilename}, 大小: ${(pdfBuffer.length / 1024).toFixed(2)} KB`);
-      return filepath;
-    } catch (error) {
-      if (browser) await browser.close();
-      throw error;
+    // 保存为 HTML 文件
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+    if (!existsSync(outputDir) && !process.env.VERCEL) {
+      await mkdir(outputDir, { recursive: true });
     }
+    
+    const filepath = path.join(outputDir, htmlFilename);
+    await writeFile(filepath, htmlContent, 'utf-8');
+    
+    console.log(`✅ 可打印 HTML 文档创建成功: ${htmlFilename}（可在浏览器中打印为 PDF）`);
+    return filepath;
   } catch (error: any) {
     console.error('❌ PDF 文档创建失败:', error.message);
     throw new Error(`PDF 文档创建失败: ${error.message}`);
