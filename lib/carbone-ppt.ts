@@ -4,6 +4,7 @@
  */
 
 const CARBONE_API_KEY = process.env.CARBONE_API_KEY || 'eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxMjgwNTA3MDU0OTEyNzYxNzQ5IiwiYXVkIjoiY2FyYm9uZSIsImV4cCI6MjQyNDM2MzcyNiwiZGF0YSI6eyJ0eXBlIjoicHJvZCJ9fQ.AXMe7WXAYhGjU_7e4WkzUt0kZh6JMkm1LCisatVC8JUYsuYXG9rnf25JQ0VPSdxhPlcL13incPWhwmwD8Lukq5erAVT82zfx3B7IlsZWPlYFck70gnomK14NDHfUjzThydanBP5AhQ6mTLA7XiFmPwndJMoOhedIQmkf3IHLUHoO_gLg';
+const CARBONE_TEMPLATE_ID = process.env.CARBONE_PPT_TEMPLATE_ID || '35f9714f419f7a26bc7e5c557b14f51c0262d394ef97d240bd4a736e2492e0a4';
 const CARBONE_BASE_URL = 'https://api.carbone.io';
 const CARBONE_VERSION = '4';
 
@@ -63,39 +64,11 @@ export async function generatePPTWithCarbone(
       }))
     };
     
-    // 创建 Markdown 模板（Carbone 支持 Markdown）
-    let mdTemplate = `# {d.title}\n\n{d.subtitle}\n\n---\n\n`;
+    // 使用预先上传的模板 ID
+    const templateId = CARBONE_TEMPLATE_ID;
+    console.log(`📋 使用 Carbone 模板 ID: ${templateId.substring(0, 20)}...`);
     
-    // 添加幻灯片循环
-    mdTemplate += `{d.slides[i].title:convCRLF()}\n================\n\n`;
-    mdTemplate += `{d.slides[i].bullets[j]:convCRLF()}\n\n`;
-    
-    // 1. 上传临时 Markdown 模板
-    const formData = new FormData();
-    formData.append('template', Buffer.from(mdTemplate, 'utf-8'), {
-      filename: 'template.md',
-      contentType: 'text/markdown'
-    });
-    
-    console.log('📤 上传 Markdown 模板到 Carbone...');
-    
-    const uploadResponse = await axios.post(
-      `${CARBONE_BASE_URL}/template`,
-      formData,
-      {
-        headers: {
-          'Authorization': `Bearer ${CARBONE_API_KEY}`,
-          'carbone-version': CARBONE_VERSION,
-          ...formData.getHeaders()
-        },
-        timeout: 30000
-      }
-    );
-    
-    const templateId = uploadResponse.data.data.templateId;
-    console.log(`✅ 模板上传成功，ID: ${templateId}`);
-    
-    // 2. 使用模板渲染为 PPTX（一步直下）
+    // 渲染为 PPTX（一步直下）
     console.log('🎨 渲染 PPT...');
     
     const renderResponse = await axios.post(
