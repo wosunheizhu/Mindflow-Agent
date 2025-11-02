@@ -9,6 +9,7 @@ import { analyzeImage, compareImages } from "./image-analyzer";
 import { createMarkdown, createWord, createTextFile, createExcel, createJSON, createPDF } from "./document-creator";
 import { registerDownload } from "./download-registry";
 import { uploadFile } from "./blob-storage";
+import { generatePPTWithCarbone } from "./carbone-ppt";
 
 /**
  * 上传文件并返回下载URL
@@ -1762,12 +1763,53 @@ async function createPresentation(
   slides: Array<{ title: string; content: string }>,
   presentationTitle?: string
 ) {
+  try {
+    console.log(`📊 开始创建 PPT: ${filename}, 幻灯片数: ${slides.length}`);
+    console.log(`🎨 使用 Carbone API 生成（替代 Aspose）`);
+    
+    // 使用 Carbone 生成 PPT
+    const { buffer, filename: pptxFilename } = await generatePPTWithCarbone(
+      filename,
+      slides,
+      presentationTitle
+    );
+    
+    // 上传到云存储
+    const downloadUrl = await uploadAndGetUrl(buffer, pptxFilename, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    
+    console.log(`✅ PPT 生成成功: ${pptxFilename}, 文件大小: ${(buffer.length / 1024).toFixed(2)} KB`);
+    
+    return {
+      success: true,
+      filename: pptxFilename,
+      slides_count: slides.length,
+      download_url: downloadUrl,
+      size: `${(buffer.length / 1024).toFixed(2)} KB`,
+      note: `✅ PPT 已生成，点击下载: ${downloadUrl}`
+    };
+  } catch (error: any) {
+    console.error('❌ PPT 创建失败:', error.message);
+    return {
+      error: "PPT 创建失败",
+      message: error.message,
+      filename: filename,
+      note: "PPT 生成遇到问题，请检查幻灯片内容或稍后重试"
+    };
+  }
+}
+
+// 保留旧的 Aspose 实现作为备份
+async function createPresentationAspose_BACKUP(
+  filename: string,
+  slides: Array<{ title: string; content: string }>,
+  presentationTitle?: string
+) {
   const axios = require('axios');
   const fs = require('fs');
   const path = require('path');
   
   try {
-    console.log(`📊 开始创建 PPT: ${filename}, 幻灯片数: ${slides.length}`);
+    console.log(`📊 开始创建 PPT (Aspose): ${filename}, 幻灯片数: ${slides.length}`);
     
     // 1. 获取 Access Token
     const accessToken = await getAsposeAccessToken();
