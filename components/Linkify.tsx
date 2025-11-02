@@ -16,11 +16,14 @@ type Props = {
 const isDownloadLink = (url: string): boolean => {
   // 1. 明确的下载路径（支持查询参数）
   if (url.includes('/api/download')) return true;
-  if (/\/download[?\/]/i.test(url)) return true;
+  if (/\/downloads?[?\/]/i.test(url)) return true;  // 支持 /download/ 和 /downloads/
   
-  // 2. 以文件扩展名结尾（排除查询参数后的判断）
+  // 2. Vercel Blob Storage 域名
+  if (url.includes('.blob.vercel-storage.com')) return true;
+  
+  // 3. 以文件扩展名结尾（排除查询参数后的判断）
   const urlWithoutQuery = url.split('?')[0];
-  const filePattern = /\.(pdf|docx?|xlsx?|pptx?|zip|rar|md|txt)$/i;
+  const filePattern = /\.(pdf|docx?|xlsx?|pptx?|zip|rar|md|txt|html)$/i;  // 添加 html
   if (filePattern.test(urlWithoutQuery)) return true;
   
   return false;
