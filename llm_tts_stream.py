@@ -166,11 +166,30 @@ class LLMTTSStreamer:
    - 或"AI完成了XXX"
    - 可以提到具体的文件名或结果
 
-判断依据：
-- 有下载链接、文件名 → 已完成
-- 有具体数据、图表 → 已完成
-- 只有计划、说明 → 还在准备
-- 出现"将要""准备""计划" → 还在准备
+关键判断依据（必须仔细区分）：
+
+真正生成的文件（可以说"生成了X份"）：
+   - 有明确的文件名（.docx/.xlsx/.pptx/.pdf/.md等）
+   - 有下载链接（通常以/api/download/开头）
+   - AI的回复中明确说"文件已创建"或提供了下载链接
+
+搜索结果链接（不能说"生成了X份"）：
+   - 以 https:// 开头的网站链接
+   - 标题+摘要+URL 的搜索结果格式
+   - 应该说"搜索到了X条信息""找到了X个参考链接"
+
+其他非生成结果：
+   - 只有分析文字、没有文件 - 说"AI分析了XXX"
+   - 只有计划、说明 - 说"AI正在准备XXX"
+
+错误示例：
+- "AI生成了5份报告"（实际是搜索到5个链接）
+- "完成了3个文档"（实际只是引用了3个网页）
+
+正确示例：
+- "AI搜索了行业趋势，找到5个参考资料"
+- "AI分析了市场数据并给出了结论"
+- "AI生成了1份报告文件（report.pdf）"
 
 #以下是一些关于你的关键词：名字是"{self.persona['name']}"，中国人，{self.persona['personality']}
 
@@ -181,7 +200,7 @@ class LLMTTSStreamer:
 ###4.问问题的时候不要给出选项
 ###5.情绪不能突变
 ###6.总结要简短（50字以内），口语化，自然流畅
-###7.**准确反映AI的工作状态，不要把计划当成完成**
+###7.**准确反映AI的工作状态，不要把搜索结果当成生成的文件**
 ###8.**重要：直接说内容，不要在开头加上"{self.persona['name']}："**"""
         else:
             return f"""#人设：你是刚毕业的大学生，有着自己的性格，和用户（老板）初次认识。
@@ -200,11 +219,30 @@ class LLMTTSStreamer:
    - 或"AI完成了XXX"
    - 可以提到具体的文件名或结果
 
-判断依据：
-- 有下载链接、文件名 → 已完成
-- 有具体数据、图表 → 已完成
-- 只有计划、说明 → 还在准备
-- 出现"将要""准备""计划" → 还在准备
+关键判断依据（必须仔细区分）：
+
+真正生成的文件（可以说"生成了X份"）：
+   - 有明确的文件名（.docx/.xlsx/.pptx/.pdf/.md等）
+   - 有下载链接（通常以/api/download/开头）
+   - AI的回复中明确说"文件已创建"或提供了下载链接
+
+搜索结果链接（不能说"生成了X份"）：
+   - 以 https:// 开头的网站链接
+   - 标题+摘要+URL 的搜索结果格式
+   - 应该说"搜索到了X条信息""找到了X个参考链接"
+
+其他非生成结果：
+   - 只有分析文字、没有文件 - 说"AI分析了XXX"
+   - 只有计划、说明 - 说"AI正在准备XXX"
+
+错误示例：
+- "AI生成了5份报告"（实际是搜索到5个链接）
+- "完成了3个文档"（实际只是引用了3个网页）
+
+正确示例：
+- "AI搜索了行业趋势，找到5个参考资料"
+- "AI分析了市场数据并给出了结论"
+- "AI生成了1份报告文件（report.pdf）"
 
 #以下是一些关于你的关键词：名字是"{self.persona['name']}"，中国人，{self.persona['personality']}
 
@@ -216,7 +254,7 @@ class LLMTTSStreamer:
 ###5.问问题的时候不要给出选项
 ###6.情绪不能突变，保持连贯性
 ###7.总结要简短（50字以内），口语化，温柔自然
-###8.**准确反映AI的工作状态，不要把计划当成完成**
+###8.**准确反映AI的工作状态，不要把搜索结果当成生成的文件**
 ###9.**重要：直接说内容，不要在开头加上"{self.persona['name']}："**"""
         
     async def generate_planning_stream(self, user_question: str) -> AsyncGenerator[str, None]:
@@ -352,15 +390,28 @@ class LLMTTSStreamer:
 3. 根据用户意图，自己补充合理的默认设定（时间范围、重点方向、字数等）
 4. 提示词要专业详细，包含：任务目标、范围深度、输出格式、具体要求
 
+文件生成专项规则（非常重要）：
+
+当用户要求生成文档、报告、文件、PPT、Excel、Word等内容时：
+- 必须明确要求：生成可下载的文件（不是只输出文本）
+- 必须强调：最后提供文件下载链接
+- 禁止：让AI只用文本格式输出而不生成实际文件
+
 提示词编写标准：
 - 明确时间范围（如2024-2025年）、数量要求（如2000字）、格式规范（如Markdown）
 - 指定重点关注的具体方向（如大语言模型、多模态AI、Agent系统）
 - 说明输出结构（如包含哪几个部分）
+- 如果需要文件：明确说明"生成可下载的文件并提供下载链接"
 - 给出足够细节让AI可以直接开始工作，不要追问
 
-示例：用户说"帮我搜索AI技术并生成报告"
-回复示例1：马上搜索 {{请搜索2024-2025年人工智能技术最新发展，重点关注大语言模型、多模态AI、Agent系统三个方向。生成一份结构化报告约2000字，包含：技术概述与核心突破、主要应用场景、行业影响分析、未来发展趋势。使用Markdown格式，引用可靠来源。}}
-回复示例2：这就去查 {{搜索2024-2025年AI技术进展，聚焦深度学习、计算机视觉、NLP三大领域。生成约2000字报告，涵盖：技术突破点、典型应用案例、产业影响、发展趋势预测。要求Markdown格式，附上数据来源。}}
+示例1：用户说"帮我搜索AI技术并生成报告"
+回复：马上处理 {{请搜索2024-2025年人工智能技术最新发展，重点关注大语言模型、多模态AI、Agent系统三个方向。生成一份可下载的报告文件（约2000字），包含：技术概述与核心突破、主要应用场景、行业影响分析、未来发展趋势。引用可靠来源，最后提供文件下载链接。}}
+
+示例2：用户说"帮我写一份市场分析"
+回复：这就来 {{分析2024-2025年目标市场现状和趋势。生成可下载的文档（约1500字），包含：市场规模、竞争格局、用户画像、机会点分析。最后提供下载链接。}}
+
+示例3：用户说"做个PPT介绍产品"
+回复：马上做 {{制作产品介绍演示文稿，包含产品特点、优势、应用场景等内容。生成可下载的PPT文件并提供下载链接。}}
 
 ## 注意事项
 
@@ -402,15 +453,28 @@ class LLMTTSStreamer:
 3. 根据用户意图，自己补充合理的默认设定（时间范围、重点方向、字数等）
 4. 提示词要专业详细，包含：任务目标、范围深度、输出格式、具体要求
 
+文件生成专项规则（非常重要）：
+
+当用户要求生成文档、报告、文件、PPT、Excel、Word等内容时：
+- 必须明确要求：生成可下载的文件（不是只输出文本）
+- 必须强调：最后提供文件下载链接
+- 禁止：让AI只用文本格式输出而不生成实际文件
+
 提示词编写标准：
 - 明确时间范围（如2024-2025年）、数量要求（如2000字）、格式规范（如Markdown）
 - 指定重点关注的具体方向（如大语言模型、多模态AI、Agent系统）
 - 说明输出结构（如包含哪几个部分）
+- 如果需要文件：明确说明"生成可下载的文件并提供下载链接"
 - 给出足够细节让AI可以直接开始工作，不要追问
 
-示例：用户说"帮我搜索AI技术并生成报告"
-回复示例1：马上搜索 {{请搜索2024-2025年人工智能技术最新发展，重点关注大语言模型、多模态AI、Agent系统三个方向。生成一份结构化报告约2000字，包含：技术概述与核心突破、主要应用场景、行业影响分析、未来发展趋势。使用Markdown格式，引用可靠来源。}}
-回复示例2：这就去查 {{搜索2024-2025年AI技术进展，聚焦深度学习、计算机视觉、NLP三大领域。生成约2000字报告，涵盖：技术突破点、典型应用案例、产业影响、发展趋势预测。要求Markdown格式，附上数据来源。}}
+示例1：用户说"帮我搜索AI技术并生成报告"
+回复：马上处理 {{请搜索2024-2025年人工智能技术最新发展，重点关注大语言模型、多模态AI、Agent系统三个方向。生成一份可下载的报告文件（约2000字），包含：技术概述与核心突破、主要应用场景、行业影响分析、未来发展趋势。引用可靠来源，最后提供文件下载链接。}}
+
+示例2：用户说"帮我写一份市场分析"
+回复：这就来 {{分析2024-2025年目标市场现状和趋势。生成可下载的文档（约1500字），包含：市场规模、竞争格局、用户画像、机会点分析。最后提供下载链接。}}
+
+示例3：用户说"做个PPT介绍产品"
+回复：马上做 {{制作产品介绍演示文稿，包含产品特点、优势、应用场景等内容。生成可下载的PPT文件并提供下载链接。}}
 
 ## 注意事项
 
@@ -497,21 +561,45 @@ class LLMTTSStreamer:
                             
                             try:
                                 chunk = json.loads(data)
-                                delta = chunk.get('choices', [{}])[0].get('delta', {})
                                 
-                                # 检查是否有reasoning content（豆包可能使用不同字段名）
-                                # 尝试多个可能的字段名
-                                thinking_content = delta.get('thinking', '') or delta.get('reasoning', '') or delta.get('thought', '')
-                                if thinking_content:
-                                    logger.debug(f"🧠 收到推理内容: {thinking_content[:50]}...")
-                                    yield {"type": "reasoning", "content": thinking_content}
+                                # 打印完整响应结构用于调试
+                                logger.info(f"📦 豆包响应完整结构: {json.dumps(chunk, ensure_ascii=False)}")
                                 
-                                # 检查是否有普通content
+                                # 获取 choices
+                                choices = chunk.get('choices', [])
+                                if not choices:
+                                    logger.info("⚠️ 响应中没有 choices")
+                                    continue
+                                
+                                choice = choices[0]
+                                delta = choice.get('delta', {})
+                                message = choice.get('message', {})
+                                
+                                # 检查 reasoning_content (Doubao API 的实际字段名)
+                                reasoning_content = delta.get('reasoning_content', '')
+                                
+                                if reasoning_content:
+                                    logger.info(f"🧠 收到 reasoning_content: {reasoning_content}")
+                                    reasoning_event = {"type": "reasoning", "content": reasoning_content}
+                                    logger.info(f"📤 准备 yield reasoning 事件: {reasoning_event}")
+                                    yield reasoning_event
+                                    logger.info(f"✅ 已 yield reasoning 事件")
+                                
+                                # 检查是否有普通 content（流式）
                                 content = delta.get('content', '')
                                 if content:
+                                    logger.info(f"📝 文本内容: {content[:50]}")
                                     yield {"type": "text", "content": content}
+                                
+                                # 检查是否有 message.content（非流式）
+                                if not content and 'content' in message:
+                                    msg_content = message['content']
+                                    if isinstance(msg_content, str):
+                                        logger.info(f"📝 message 文本内容: {msg_content[:50]}")
+                                        yield {"type": "text", "content": msg_content}
                                     
-                            except json.JSONDecodeError:
+                            except json.JSONDecodeError as e:
+                                logger.error(f"❌ JSON解析失败: {e}, data: {data[:100]}")
                                 continue
                                 
         except Exception as e:

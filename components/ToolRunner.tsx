@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { TOOL_DEFS } from '@/lib/tools';
 import JsonView from './JsonView';
+import FilePreview from './FilePreview';
 import toast from 'react-hot-toast';
 import ChartPreview from './ChartPreview';
 import { downloadTextFile } from '@/lib/utils';
@@ -165,6 +166,8 @@ export default function ToolRunner({ toolId }: Props) {
             <div className="rounded-lg border border-border dark:border-border-dark p-2 max-h-[600px] overflow-auto break-words">
               <JsonView src={result} />
             </div>
+            {/* 文件预览 */}
+            <FilePreview result={result} />
           </div>
         )}
       </div>

@@ -47,7 +47,23 @@ function convertToolsForClaude(openaiTools: any[]) {
 
 export async function POST(req: NextRequest): Promise<Response> {
   try {
-    const { messages, useTools = true, deepThinking = false, browserSearch = false, avatarEnabled = false, avatarVoice = 'zh_female_sajiaonvyou_moon_bigtts', modelProvider, hasFiles = false } = await req.json();
+    const { 
+      messages, 
+      useTools = true, 
+      deepThinking = false, 
+      deepThinkingEnabled = false, 
+      deepThinkingLevel = 'medium',
+      reasoning,
+      browserSearch = false, 
+      avatarEnabled = false, 
+      avatarVoice = 'zh_female_sajiaonvyou_moon_bigtts', 
+      modelProvider, 
+      hasFiles = false 
+    } = await req.json();
+    
+    // 兼容：如果没有传 reasoning，根据旧的 deepThinking 生成
+    // GPT-5 使用工具时，reasoning.effort 最低为 'low'
+    const actualReasoning = reasoning || (deepThinking ? { effort: 'high' } : { effort: 'low' });
     
     // 根据用户选择或环境变量决定使用哪个AI服务
     let aiService;
@@ -84,14 +100,6 @@ export async function POST(req: NextRequest): Promise<Response> {
           provider: 'gpt5-thinking',
           model: process.env.GPT5_THINKING_MODEL || 'gpt-5' // Mindflow-Y 使用真正的 GPT-5 思考模型
         };
-      } else if (modelProvider === 'gpt4-turbo') {
-        aiService = {
-          client: new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY!,
-          }),
-          provider: 'gpt4-turbo',
-          model: 'gpt-4-turbo' // Mindflow-Y-Fast 使用 GPT-4 Turbo
-        };
       } else {
         aiService = {
           client: new OpenAI({
@@ -122,6 +130,7 @@ export async function POST(req: NextRequest): Promise<Response> {
 - 仅在需要外部事实、计算、文件处理时调用工具；记录每次调用的目的、输入、关键结果
 - 若信息可能时效性高，先验证再引用；无法验证则标记为不确定并给出下一步求证方法
 - **凡是涉及时事、新闻、最新发展等时效性内容，必须先使用 search_web 工具搜索最新信息**
+- **使用搜索工具获取信息后，必须在回答中附上参考资料的原始链接，方便用户查看来源**
 
 ### 推理与约束
 - 使用结构化推理，但不暴露长篇思维过程；只输出结论与证据摘要
@@ -158,6 +167,12 @@ export async function POST(req: NextRequest): Promise<Response> {
 - 关键决策
 - 数据来源
 
+**【参考资料】**
+（如果使用了搜索工具或引用了外部资料，必须列出所有参考链接）
+- [资料标题](完整URL)
+- [资料标题](完整URL)
+（注意：直接列出完整的 https:// 链接，方便用户点击查看）
+
 **【质量验证】**
 - 完整性：✓/✗
 - 准确性：✓/✗
@@ -192,6 +207,7 @@ export async function POST(req: NextRequest): Promise<Response> {
           let shouldContinue = true;
           let iterationCount = 0;
           const maxIterations = 5;
+          let previousResponseId: string | null = null; // 用于 GPT-5 Responses API 的上下文追踪
 
           // 数字人第一次回答已禁用（不在任务开始时打断）
           // 数字人只在任务完成后做总结
@@ -210,108 +226,10 @@ export async function POST(req: NextRequest): Promise<Response> {
                 encoder.encode(`data: ${JSON.stringify({ type: "debug", content: `第 ${iterationCount} 轮对话开始，整合工具结果` })}\n\n`)
               );
             }
-            
-            // Ollama模式下的智能工具检测
-            if (aiService.provider === 'ollama' && actualUseTools && iterationCount === 1) {
-              const userMessage = conversationMessages[conversationMessages.length - 1];
-              const userContent = userMessage?.content || '';
-              
-              // 检测计算需求
-              const mathMatch = userContent.match(/计算|算.*?(\d+)\s*[\*×+\-÷/]\s*(\d+)/);
-              if (mathMatch) {
-                const nums = userContent.match(/(\d+)\s*[\*×+\-÷/]\s*(\d+)/);
-                if (nums) {
-                  const expression = `${nums[1]} ${nums[0].includes('×') || nums[0].includes('*') ? '*' : nums[0].match(/[\*×+\-÷/]/)[0]} ${nums[2]}`;
-                  
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "tool_call", tool: "calculate", args: { expression } })}\n\n`)
-                  );
-                  
-                  const toolResult = await executeToolCall("calculate", { expression });
-                  
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: "calculate", result: toolResult })}\n\n`)
-                  );
-                  
-                  // 修改用户消息为工具结果
-                  conversationMessages[conversationMessages.length - 1] = {
-                    role: "user",
-                    content: `用户要求计算：${expression}\n\n计算结果：${toolResult.result}\n\n请用友好的方式告诉用户这个结果。`
-                  };
-                }
-              }
-              
-              // 检测搜索需求
-              if (userContent.match(/搜索|查找|search/i)) {
-                const searchQuery = userContent.replace(/请|帮我|帮忙|搜索|查找|search/gi, '').trim();
-                if (searchQuery && searchQuery.length > 2) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "tool_call", tool: "search_web", args: { query: searchQuery } })}\n\n`)
-                  );
-                  
-                  const toolResult = await executeToolCall("search_web", { query: searchQuery });
-                  
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: "search_web", result: toolResult })}\n\n`)
-                  );
-                  
-                  conversationMessages[conversationMessages.length - 1] = {
-                    role: "user",
-                    content: `用户要求搜索：${searchQuery}\n\n搜索结果：${JSON.stringify(toolResult)}\n\n请基于搜索结果回答用户的问题。`
-                  };
-                }
-              }
-            }
 
             // 根据AI服务类型选择不同的调用方式
             let stream;
-            if (aiService.provider === 'ollama') {
-              // 深度思考模式：添加思考提示
-              if (deepThinking) {
-                controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "thinking", content: "🧠 启动深度思考模式..." })}\n\n`)
-                );
-                
-                // 添加思考过程提示
-                const thinkingSteps = [
-                  "📝 分析问题本质...",
-                  "🔍 搜索相关知识...", 
-                  "💭 构建推理链条...",
-                  "⚖️ 权衡不同方案...",
-                  "✨ 生成最终答案..."
-                ];
-                
-                for (const step of thinkingSteps) {
-                  controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "thinking", content: step })}\n\n`)
-                  );
-                  // 添加短暂延迟以显示思考过程
-                  await new Promise(resolve => setTimeout(resolve, 300));
-                }
-              }
-
-              // Ollama API调用
-              const ollamaResponse = await fetch(`${aiService.baseURL}/api/chat`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  model: aiService.model,
-                  messages: conversationMessages,
-                  stream: true,
-                  options: {
-                    temperature: deepThinking ? 0.3 : 0.7,
-                    num_predict: deepThinking ? 4000 : 2000,
-                    browser_search: browserSearch, // 浏览器搜索参数
-                  }
-                })
-              });
-
-              if (!ollamaResponse.ok) {
-                throw new Error(`Ollama API错误: ${ollamaResponse.status}`);
-              }
-
-              stream = ollamaResponse.body;
-            } else if (aiService.provider === 'claude') {
+            if (aiService.provider === 'claude') {
               // Claude API调用
               const claudeTools = actualUseTools ? convertToolsForClaude(tools) : undefined;
               
@@ -334,8 +252,8 @@ export async function POST(req: NextRequest): Promise<Response> {
               
               const claudeStream = await aiService.client.messages.stream({
                 model: "claude-sonnet-4-20250514",
-                max_tokens: deepThinking ? 32000 : 16000,
-                temperature: deepThinking ? 0.3 : 0.7,
+                max_tokens: actualReasoning.effort === 'high' ? 32000 : actualReasoning.effort === 'medium' ? 24000 : 16000,
+                temperature: actualReasoning.effort === 'low' ? 0.7 : 0.3,
                 system: systemPrompt, // Claude使用专门的system参数
                 messages: claudeMessages,
                 tools: claudeTools,
@@ -359,8 +277,8 @@ export async function POST(req: NextRequest): Promise<Response> {
                     content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)
                   })),
                   thinking: { type: 'disabled' }, // 根据文档禁用thinking
-                  max_tokens: deepThinking ? 16000 : 8000,
-                  temperature: deepThinking ? 0.3 : 0.7,
+                  max_tokens: actualReasoning.effort === 'high' ? 16000 : actualReasoning.effort === 'medium' ? 12000 : 8000,
+                  temperature: actualReasoning.effort === 'low' ? 0.7 : 0.3,
                   stream: true
                 })
               });
@@ -371,297 +289,256 @@ export async function POST(req: NextRequest): Promise<Response> {
 
               stream = doubaoResponse.body;
             } else if (aiService.provider === 'gpt5-pro') {
-              // Mindflow-Y-Pro: 真正的GPT5 使用 Responses API
-              console.log('🚀 使用 GPT-5 Responses API');
+              // Mindflow-Y-Pro: 使用 GPT-5 Responses API 流式版本
+              console.log('🚀 使用 GPT-5 Responses API (Pro版本 - 流式)');
               
-              // 初始化变量
-              let gpt5Content = '';
-              
-              // 清理消息历史：GPT-5 Responses API 不支持 tool_calls、tool_call_id 等字段
-              const cleanedMessages = conversationMessages.map(msg => {
-                // 移除工具调用相关字段
-                const { tool_calls, tool_call_id, ...cleanMsg } = msg as any;
-                // 只保留 role 和 content
-                return {
-                  role: cleanMsg.role,
-                  content: cleanMsg.content || ''
-                };
-              }).filter(msg => msg.role !== 'tool'); // 移除 tool 角色的消息
-              
-              console.log(`📤 发送 ${cleanedMessages.length} 条清理后的消息到 GPT-5-Pro`);
-              
-              // GPT-5 使用 Responses API，参数结构不同
               try {
-                const gpt5Response = await aiService.client.responses.create({
+                // 构建 Responses API 参数
+                const gpt5Params: any = {
                   model: aiService.model,
-                  input: cleanedMessages, // 使用清理后的消息
-                  reasoning: { effort: deepThinking ? "high" : "medium" }, // 推理强度
-                  text: { verbosity: "high" }, // 输出详尽程度
-                  // GPT-5 Responses API 不支持 max_tokens 参数
-                  stream: false, // GPT-5 Responses API 可能不支持流式，先用非流式
+                  input: conversationMessages,
+                  reasoning: actualReasoning,
+                  text: { verbosity: "high" },
+                };
+
+                // 传递工具定义
+                if (actualUseTools) {
+                  const responsesTools = [
+                    { type: "web_search" },
+                    ...tools
+                  ];
+                  gpt5Params.tools = responsesTools;
+                  gpt5Params.tool_choice = "auto";
+                  console.log(`📤 传递 ${responsesTools.length} 个工具到 GPT-5`);
+                }
+
+                // 使用 previous_response_id 保持上下文
+                if (previousResponseId) {
+                  gpt5Params.previous_response_id = previousResponseId;
+                  console.log(`🔄 使用 previous_response_id: ${String(previousResponseId).substring(0, 20)}...`);
+                }
+
+                // 调用非流式端点（组织需要验证才能使用流式）
+                const gpt5ServiceUrl = process.env.GPT5_SERVICE_URL || 'http://localhost:8002';
+                console.log(`[GPT5-Pro] 调用服务: ${gpt5ServiceUrl}/api/responses (model=${aiService.model})`);
+                
+                const serviceResponse = await fetch(`${gpt5ServiceUrl}/api/responses`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(gpt5Params)
                 });
 
-                console.log('✅ GPT-5 响应成功');
+                if (!serviceResponse.ok) {
+                  const errorText = await serviceResponse.text();
+                  console.error(`[GPT5-Pro] 服务错误 ${serviceResponse.status}: ${errorText}`);
+                  throw new Error(`GPT-5 Service error: ${serviceResponse.status} - ${errorText}`);
+                }
+
+                const gpt5Response = await serviceResponse.json();
+                
+                // 保存 response_id 用于下一轮
+                if (gpt5Response.response_id) {
+                  previousResponseId = gpt5Response.response_id;
+                  console.log(`💾 保存 response_id: ${String(previousResponseId).substring(0, 20)}...`);
+                }
+
+                console.log('✅ GPT-5 Responses API 响应成功');
+                
+                // 发送内置工具调用通知（web_search 等）
+                if (gpt5Response.web_search_calls && gpt5Response.web_search_calls.length > 0) {
+                  console.log(`🌐 GPT-5 Pro 内置工具: ${gpt5Response.web_search_calls.length} 次 web_search`);
+                  for (const wsCall of gpt5Response.web_search_calls) {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ 
+                        type: "tool_call", 
+                        tool: "web_search", 
+                        args: { query: wsCall.query || wsCall.action?.query || '未知查询' }
+                      })}\n\n`)
+                    );
+                  }
+                  // 发送工具完成通知
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ 
+                      type: "tool_result", 
+                      tool: "web_search", 
+                      result: { message: `完成 ${gpt5Response.web_search_calls.length} 次搜索`, builtin: true }
+                    })}\n\n`)
+                  );
+                }
                 
                 // 提取 reasoning 内容（如果有）
                 if (gpt5Response.reasoning_content) {
                   controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "reasoning_complete", content: gpt5Response.reasoning_content })}\n\n`)
+                    encoder.encode(`data: ${JSON.stringify({ 
+                      type: "reasoning_complete", 
+                      content: gpt5Response.reasoning_content 
+                    })}\n\n`)
                   );
                 }
                 
                 // 提取主要内容
                 const responseText = gpt5Response.output_text || gpt5Response.text || '';
                 
-                // 检查是否包含工具调用（GPT-5 通过文本描述工具调用）
-                const toolCallPattern = /【.*?】[\s\S]*?调用[：:]\s*(\w+)[\s\S]*?参数[：:]\s*(\{[\s\S]*?\})/g;
-                const toolMatches = Array.from(responseText.matchAll(toolCallPattern));
-                
-                if (actualUseTools && toolMatches.length > 0 && iterationCount < maxIterations) {
-                  console.log(`🔧 GPT-5 输出中检测到 ${toolMatches.length} 个工具调用`);
-                  
-                  // 先发送 GPT-5 的原始输出
+                // 模拟流式输出文本内容
+                if (responseText) {
                   const chunkSize = 50;
                   for (let i = 0; i < responseText.length; i += chunkSize) {
                     const chunk = responseText.slice(i, i + chunkSize);
                     controller.enqueue(
                       encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
                     );
-                    gpt5Content += chunk;
                     await new Promise(resolve => setTimeout(resolve, 20));
                   }
-                  
-                  // 添加助手的消息到历史
-                  conversationMessages.push({
-                    role: "assistant",
-                    content: gpt5Content
-                  });
-                  
-                  // 执行工具调用
-                  let toolResults = '';
-                  for (const matchResult of toolMatches) {
-                    const match = matchResult as RegExpMatchArray;
-                    if (!match[1] || !match[2]) continue;
-                    const toolName = String(match[1]);
-                    const argsStr = String(match[2]);
-                    
-                    try {
-                      const toolArgs = JSON.parse(argsStr);
-                      console.log(`⚙️ 执行工具: ${toolName}`, toolArgs);
-                      
-                      // 发送工具调用通知
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "tool_call", tool: toolName, args: toolArgs })}\n\n`)
-                      );
-                      
-                      // 执行工具
-                      const toolResult = await executeToolCall(toolName, toolArgs);
-                      
-                      // 发送工具结果
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: toolName, result: toolResult })}\n\n`)
-                      );
-                      
-                      toolResults += `\n\n【工具：${toolName}】\n结果：${JSON.stringify(toolResult, null, 2)}`;
-                      console.log(`✅ 工具 ${toolName} 执行完成`);
-                    } catch (error: any) {
-                      console.error(`❌ 工具 ${toolName} 执行失败:`, error);
-                      toolResults += `\n\n【工具：${toolName}】\n错误：${error.message}`;
-                    }
-                  }
-                  
-                  // 将工具结果添加到对话历史，继续下一轮
-                  conversationMessages.push({
-                    role: "user",
-                    content: `以下是工具执行结果，请基于这些结果给出最终答案：${toolResults}`
-                  });
-                  
-                  shouldContinue = true;
-                  console.log(`🔄 GPT-5 将在下一轮看到工具结果并给出最终答案 (当前迭代 ${iterationCount}/${maxIterations})`)
-                } else {
-                  // 没有工具调用，直接输出
-                  if (responseText) {
-                    const chunkSize = 50;
-                    for (let i = 0; i < responseText.length; i += chunkSize) {
-                      const chunk = responseText.slice(i, i + chunkSize);
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
-                      );
-                      gpt5Content += chunk;
-                      await new Promise(resolve => setTimeout(resolve, 20));
-                    }
-                  }
-                  
-                  // 添加到对话历史
-                  conversationMessages.push({
-                    role: "assistant",
-                    content: gpt5Content
-                  });
-                  
-                  shouldContinue = false;
-                  console.log('✅ GPT-5 内容发送完成（无工具调用）');
                 }
+
+                shouldContinue = false;
+                console.log('✅ GPT-5 Pro 对话完成');
+
               } catch (error: any) {
-                console.error('❌ GPT-5 调用错误:', error);
+                console.error('❌ GPT-5 Responses API 调用错误:', error);
                 controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "error", error: `GPT-5 调用失败: ${error.message}` })}\n\n`)
+                  encoder.encode(`data: ${JSON.stringify({ 
+                    type: "error", 
+                    error: `GPT-5 调用失败: ${error.message}` 
+                  })}\n\n`)
                 );
                 shouldContinue = false;
               }
               
-              // GPT-5 处理完成，跳过后续的流处理，进入下一轮循环（如果 shouldContinue = true）
               continue;
             } else if (aiService.provider === 'gpt5-thinking') {
-              // Mindflow-Y: 真正的 GPT-5-thinking 使用 Responses API
-              console.log('🧠 使用 GPT-5-thinking Responses API');
+              // Mindflow-Y: 使用 GPT-5 Responses API（通过独立 Python 服务）
+              console.log('🧠 使用 GPT-5 Responses API (轻量级模式 - 独立服务)');
               
-              // 初始化变量
-              let gpt5ThinkingContent = '';
-              
-              // 清理消息历史：GPT-5 Responses API 不支持 tool_calls、tool_call_id 等字段
-              const cleanedMessages = conversationMessages.map(msg => {
-                // 移除工具调用相关字段
-                const { tool_calls, tool_call_id, ...cleanMsg } = msg as any;
-                // 只保留 role 和 content
-                return {
-                  role: cleanMsg.role,
-                  content: cleanMsg.content || ''
-                };
-              }).filter(msg => msg.role !== 'tool'); // 移除 tool 角色的消息
-              
-              console.log(`📤 发送 ${cleanedMessages.length} 条清理后的消息到 GPT-5`);
-              
-              // GPT-5-thinking 使用 Responses API
               try {
-                const gpt5Response = await aiService.client.responses.create({
+                // 构建 Responses API 参数
+                const gpt5Params: any = {
                   model: aiService.model,
-                  input: cleanedMessages, // 使用清理后的消息
-                  reasoning: { effort: deepThinking ? "high" : "low" }, // Mindflow-Y 默认低推理强度
+                  input: conversationMessages, // Responses API 使用 input 而非 messages
+                  reasoning: actualReasoning, // 使用前端传来的推理强度（low/medium/high）
                   text: { verbosity: "medium" }, // 中等详尽程度
-                  // GPT-5 Responses API 不支持 max_tokens 参数
-                  stream: false,
+                };
+
+                // 传递工具定义（Responses API 原生支持 + 内置工具）
+                if (actualUseTools) {
+                  // 添加内置 web_search 工具（GPT-5 原生支持）
+                  const responsesTools = [
+                    { type: "web_search" },  // 内置网络搜索
+                    ...tools  // 自定义工具
+                  ];
+                  gpt5Params.tools = responsesTools;
+                  gpt5Params.tool_choice = "auto";
+                  console.log(`📤 传递 ${responsesTools.length} 个工具（含内置 web_search）到 GPT-5 Responses API`);
+                }
+
+                // 使用 previous_response_id 保持上下文（关键！）
+                if (previousResponseId) {
+                  gpt5Params.previous_response_id = previousResponseId;
+                  console.log(`🔄 使用 previous_response_id: ${String(previousResponseId).substring(0, 20)}...`);
+                }
+
+                // 调用非流式端点（组织需要验证才能使用流式）
+                const gpt5ServiceUrl = process.env.GPT5_SERVICE_URL || 'http://localhost:8002';
+                console.log(`[GPT5-Thinking] 调用服务: ${gpt5ServiceUrl}/api/responses (model=${aiService.model})`);
+                
+                const serviceResponse = await fetch(`${gpt5ServiceUrl}/api/responses`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(gpt5Params)
                 });
 
-                console.log('✅ GPT-5-thinking 响应成功');
+                if (!serviceResponse.ok) {
+                  const errorText = await serviceResponse.text();
+                  console.error(`[GPT5-Thinking] 服务错误 ${serviceResponse.status}: ${errorText}`);
+                  throw new Error(`GPT-5 Service error: ${serviceResponse.status} - ${errorText}`);
+                }
+
+                const gpt5Response = await serviceResponse.json();
+                
+                // 保存 response_id 用于下一轮
+                if (gpt5Response.response_id) {
+                  previousResponseId = gpt5Response.response_id;
+                  console.log(`💾 保存 response_id: ${String(previousResponseId).substring(0, 20)}...`);
+                }
+
+                console.log('✅ GPT-5 Responses API 响应成功');
+                
+                // 发送内置工具调用通知（web_search 等）
+                if (gpt5Response.web_search_calls && gpt5Response.web_search_calls.length > 0) {
+                  console.log(`🌐 GPT-5 Thinking 内置工具: ${gpt5Response.web_search_calls.length} 次 web_search`);
+                  for (const wsCall of gpt5Response.web_search_calls) {
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ 
+                        type: "tool_call", 
+                        tool: "web_search", 
+                        args: { query: wsCall.query || wsCall.action?.query || '未知查询' }
+                      })}\n\n`)
+                    );
+                  }
+                  // 发送工具完成通知
+                  controller.enqueue(
+                    encoder.encode(`data: ${JSON.stringify({ 
+                      type: "tool_result", 
+                      tool: "web_search", 
+                      result: { message: `完成 ${gpt5Response.web_search_calls.length} 次搜索`, builtin: true }
+                    })}\n\n`)
+                  );
+                }
                 
                 // 提取 reasoning 内容（如果有）
                 if (gpt5Response.reasoning_content) {
                   controller.enqueue(
-                    encoder.encode(`data: ${JSON.stringify({ type: "reasoning_complete", content: gpt5Response.reasoning_content })}\n\n`)
+                    encoder.encode(`data: ${JSON.stringify({ 
+                      type: "reasoning_complete", 
+                      content: gpt5Response.reasoning_content 
+                    })}\n\n`)
                   );
                 }
                 
                 // 提取主要内容
                 const responseText = gpt5Response.output_text || gpt5Response.text || '';
                 
-                // 检查是否包含工具调用（GPT-5 通过文本描述工具调用）
-                const toolCallPattern = /【.*?】[\s\S]*?调用[：:]\s*(\w+)[\s\S]*?参数[：:]\s*(\{[\s\S]*?\})/g;
-                const toolMatches = Array.from(responseText.matchAll(toolCallPattern));
-                
-                if (actualUseTools && toolMatches.length > 0 && iterationCount < maxIterations) {
-                  console.log(`🔧 GPT-5-thinking 输出中检测到 ${toolMatches.length} 个工具调用`);
-                  
-                  // 先发送 GPT-5-thinking 的原始输出
+                // 模拟流式输出文本内容
+                if (responseText) {
                   const chunkSize = 50;
                   for (let i = 0; i < responseText.length; i += chunkSize) {
                     const chunk = responseText.slice(i, i + chunkSize);
                     controller.enqueue(
                       encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
                     );
-                    gpt5ThinkingContent += chunk;
                     await new Promise(resolve => setTimeout(resolve, 20));
                   }
-                  
-                  // 添加助手的消息到历史
-                  conversationMessages.push({
-                    role: "assistant",
-                    content: gpt5ThinkingContent
-                  });
-                  
-                  // 执行工具调用
-                  let toolResults = '';
-                  for (const matchResult of toolMatches) {
-                    const match = matchResult as RegExpMatchArray;
-                    if (!match[1] || !match[2]) continue;
-                    const toolName = String(match[1]);
-                    const argsStr = String(match[2]);
-                    
-                    try {
-                      const toolArgs = JSON.parse(argsStr);
-                      console.log(`⚙️ 执行工具: ${toolName}`, toolArgs);
-                      
-                      // 发送工具调用通知
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "tool_call", tool: toolName, args: toolArgs })}\n\n`)
-                      );
-                      
-                      // 执行工具
-                      const toolResult = await executeToolCall(toolName, toolArgs);
-                      
-                      // 发送工具结果
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: toolName, result: toolResult })}\n\n`)
-                      );
-                      
-                      toolResults += `\n\n【工具：${toolName}】\n结果：${JSON.stringify(toolResult, null, 2)}`;
-                      console.log(`✅ 工具 ${toolName} 执行完成`);
-                    } catch (error: any) {
-                      console.error(`❌ 工具 ${toolName} 执行失败:`, error);
-                      toolResults += `\n\n【工具：${toolName}】\n错误：${error.message}`;
-                    }
-                  }
-                  
-                  // 将工具结果添加到对话历史，继续下一轮
-                  conversationMessages.push({
-                    role: "user",
-                    content: `以下是工具执行结果，请基于这些结果给出最终答案：${toolResults}`
-                  });
-                  
-                  shouldContinue = true;
-                  console.log(`🔄 GPT-5-thinking 将在下一轮看到工具结果并给出最终答案 (当前迭代 ${iterationCount}/${maxIterations})`)
-                } else {
-                  // 没有工具调用，直接输出
-                  if (responseText) {
-                    const chunkSize = 50;
-                    for (let i = 0; i < responseText.length; i += chunkSize) {
-                      const chunk = responseText.slice(i, i + chunkSize);
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
-                      );
-                      gpt5ThinkingContent += chunk;
-                      await new Promise(resolve => setTimeout(resolve, 20));
-                    }
-                  }
-                  
-                  // 添加到对话历史
-                  conversationMessages.push({
-                    role: "assistant",
-                    content: gpt5ThinkingContent
-                  });
-                  
-                  shouldContinue = false;
-                  console.log('✅ GPT-5-thinking 内容发送完成（无工具调用）');
                 }
+
+                shouldContinue = false;
+                console.log('✅ GPT-5 Thinking 对话完成');
+
               } catch (error: any) {
-                console.error('❌ GPT-5-thinking 调用错误:', error);
+                console.error('❌ GPT-5 Responses API 调用错误:', error);
                 controller.enqueue(
-                  encoder.encode(`data: ${JSON.stringify({ type: "error", error: `GPT-5-thinking 调用失败: ${error.message}` })}\n\n`)
+                  encoder.encode(`data: ${JSON.stringify({ 
+                    type: "error", 
+                    error: `GPT-5 调用失败: ${error.message}` 
+                  })}\n\n`)
                 );
                 shouldContinue = false;
               }
               
-              // GPT-5-thinking 处理完成，跳过后续的流处理，进入下一轮循环（如果 shouldContinue = true）
               continue;
             } else {
-              // 标准OpenAI API调用 (GPT-4o / GPT-4 Turbo)
+              // 标准OpenAI API调用 (GPT-4o)
               const modelName = aiService.model || "gpt-4o";
-              const modelConfig = deepThinking ? {
+              const modelConfig = actualReasoning.effort !== 'low' ? {
                 model: modelName,
                 temperature: 0.3,
-                max_tokens: 32000,
+                max_tokens: actualReasoning.effort === 'high' ? 32000 : actualReasoning.effort === 'medium' ? 24000 : 16000,
               } : {
                 model: modelName,
-                temperature: aiService.provider === 'gpt4-turbo' ? 1.0 : 0.7, // GPT-4 Turbo 使用默认温度
+                temperature: 0.7,
                 max_tokens: 16000,
               };
 
@@ -680,104 +557,7 @@ export async function POST(req: NextRequest): Promise<Response> {
             let toolCalls: any[] = [];
 
             // gpt5-thinking 和 gpt5-pro 都使用 Responses API，已在上面处理并 continue
-            if (aiService.provider === 'ollama') {
-              // 处理Ollama流式响应
-              const reader = stream.getReader();
-              const decoder = new TextDecoder();
-              let modelThinkingText = '';
-
-              while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                const chunk = decoder.decode(value);
-                const lines = chunk.split('\n');
-
-                for (const line of lines) {
-                  if (line.trim()) {
-                    try {
-                      const data = JSON.parse(line);
-                      
-                      // 提取模型的thinking字段
-                      if (data.message?.thinking) {
-                        modelThinkingText += data.message.thinking;
-                        // 实时发送thinking内容
-                        controller.enqueue(
-                          encoder.encode(`data: ${JSON.stringify({ type: "model_thinking_stream", content: data.message.thinking })}\n\n`)
-                        );
-                      }
-                      
-                      // 提取模型的正式回答
-                      if (data.message?.content) {
-                        currentContent += data.message.content;
-                        
-                        // 发送内容到前端
-                        controller.enqueue(
-                          encoder.encode(`data: ${JSON.stringify({ type: "content", content: data.message.content })}\n\n`)
-                        );
-                      }
-                      
-                      if (data.done) {
-                        // 发送完整的thinking内容
-                        if (modelThinkingText.trim()) {
-                          controller.enqueue(
-                            encoder.encode(`data: ${JSON.stringify({ type: "model_thinking", content: modelThinkingText.trim() })}\n\n`)
-                          );
-                        }
-                        shouldContinue = false;
-                        break;
-                      }
-                    } catch (e) {
-                      // 忽略解析错误
-                    }
-                  }
-                }
-              }
-              
-              // 响应完成后，检查是否需要调用工具
-              if (actualUseTools && currentContent) {
-                // 检查是否包含工具调用标记
-                let toolCallMatch = currentContent.match(/<tool_call>([\s\S]*?)<\/tool_call>/);
-                if (!toolCallMatch) {
-                  toolCallMatch = currentContent.match(/```json\s*([\s\S]*?)\s*```/);
-                }
-                
-                if (toolCallMatch) {
-                  try {
-                    const toolCallText = toolCallMatch[1].trim();
-                    const toolCallData = JSON.parse(toolCallText);
-                    
-                    if (toolCallData.tool && toolCallData.args) {
-                      // 发送工具调用
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "tool_call", tool: toolCallData.tool, args: toolCallData.args })}\n\n`)
-                      );
-                      
-                      // 执行工具
-                      const toolResult = await executeToolCall(toolCallData.tool, toolCallData.args);
-                      
-                      controller.enqueue(
-                        encoder.encode(`data: ${JSON.stringify({ type: "tool_result", tool: toolCallData.tool, result: toolResult })}\n\n`)
-                      );
-                      
-                      // 添加工具结果到对话
-                      conversationMessages.push({
-                        role: "assistant",
-                        content: currentContent
-                      });
-                      conversationMessages.push({
-                        role: "user",
-                        content: `工具返回结果：${JSON.stringify(toolResult)}，请基于这个结果给出完整答案。`
-                      });
-                      
-                      shouldContinue = true;
-                    }
-                  } catch (e) {
-                    // 工具调用解析失败
-                  }
-                }
-              }
-            } else if (aiService.provider === 'claude') {
+            if (aiService.provider === 'claude') {
               // 处理Claude流式响应
               let claudeToolUse: any = null;
               let hasToolCall = false;
@@ -942,8 +722,8 @@ export async function POST(req: NextRequest): Promise<Response> {
               }
             }
 
-            // 处理工具调用（OpenAI和GPT4-Turbo支持，Claude在流内处理，GPT5系列使用Responses API单独处理）
-            if ((aiService.provider === 'openai' || aiService.provider === 'gpt4-turbo') && actualUseTools && toolCalls.length > 0) {
+            // 处理工具调用（OpenAI支持，Claude在流内处理，GPT5系列使用Responses API单独处理）
+            if (aiService.provider === 'openai' && actualUseTools && toolCalls.length > 0) {
               conversationMessages.push({
                 role: "assistant",
                 content: currentContent || null,

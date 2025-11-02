@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { consumeDownload } from "../../../lib/download-registry";
+import { getFile } from "../../../lib/blob-storage";
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -11,7 +12,14 @@ export async function GET(req: NextRequest): Promise<Response> {
     return new Response('Missing token', { status: 400 });
   }
   
-  const item = await consumeDownload(token);
+  // 先尝试新的 blob-storage
+  let item = await getFile(token);
+  
+  // 降级到旧的 download-registry（兼容性）
+  if (!item) {
+    item = await consumeDownload(token);
+  }
+  
   if (!item) {
     return new Response('Invalid or expired token', { status: 404 });
   }

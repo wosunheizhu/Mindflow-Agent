@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { Send, Loader2, Maximize2, Minimize2, User, Phone, Plus, Mic, MicOff, Upload, Brain, X, FileText, Image as ImageIcon, Volume2, VolumeX } from 'lucide-react';
+import { Send, Loader2, Maximize2, Minimize2, User, Phone, Plus, Mic, MicOff, Upload, X, FileText, Image as ImageIcon, Volume2, VolumeX, Brain } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoginPrompt from './LoginPrompt';
 import LoginModal from './LoginModal';
@@ -68,8 +68,19 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   const [currentReply, setCurrentReply] = useState(''); // 当前正在生成的回复
   const [currentReasoning, setCurrentReasoning] = useState(''); // 当前正在生成的推理内容
   const [isRecording, setIsRecording] = useState(false); // 麦克风录音状态
-  const [deepThinking, setDeepThinking] = useState(false); // 深度思考模式
+  
+  // 深度思考设置：只控制数字员工本身的 LLM（豆包），简单开关
+  const [deepThinking, setDeepThinking] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('avatar_deep_thinking');
+    return saved ? saved === 'true' : false;
+  });
+  
+  const [expandedReasoning, setExpandedReasoning] = useState<{[key: number]: boolean}>({}); // 每条消息的推理展开状态
+  const [currentReasoningExpanded, setCurrentReasoningExpanded] = useState(false); // 当前推理的展开状态
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); // 上传的文件
+  const [lastSummaryText, setLastSummaryText] = useState(''); // 上一次总结内容（用于去重）
+  const [lastSummaryTime, setLastSummaryTime] = useState(0); // 上一次总结时间（用于去重）
   const [soundEnabled, setSoundEnabled] = useState(() => {
     // 初始化时从localStorage读取
     if (typeof window !== 'undefined') {
@@ -82,6 +93,10 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const reasoningRef = useRef<string>(''); // 用 ref 实时跟踪 reasoning 内容
+  const audioQueueRef = useRef<Map<number, Blob>>(new Map()); // 音频播放队列
+  const currentlyPlayingRef = useRef<boolean>(false); // 是否正在播放
+  const nextOrderToPlayRef = useRef<number>(1); // 下一个要播放的序号
 
   // 使用外部传入的展开状态，或使用内部状态
   const isExpanded = externalIsExpanded !== undefined ? externalIsExpanded : internalIsExpanded;
@@ -111,10 +126,34 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     }
   }, [soundEnabled]);
 
+  // 同步深度思考设置到 localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('avatar_deep_thinking', String(deepThinking));
+    }
+  }, [deepThinking]);
+
   // 切换声音开关
   const toggleSound = () => {
     const newState = !soundEnabled;
     setSoundEnabled(newState);
+    
+    // 如果关闭声音，立即停止当前播放的音频并清空队列
+    if (!newState) {
+      // 停止当前播放
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setIsSpeaking(false);
+      }
+      
+      // 清空音频队列
+      audioQueueRef.current.clear();
+      currentlyPlayingRef.current = false;
+      
+      console.log('🔇 声音已关闭，已停止播放并清空队列');
+    }
+    
     toast.success(newState ? '🔊 声音已开启' : '🔇 声音已关闭', { duration: 1000 });
   };
   
@@ -229,18 +268,32 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
       if (type === 'avatar_summary') {
         console.log(`✅ [数字员工组件] 处理 ${type} 事件，文本: ${text?.substring(0, 50)}...`);
         
-        // 添加Agent触发的数字员工回复到历史
+        // 去重：检查是否与上一次总结相同或相似
         if (text && text.trim()) {
+          const now = Date.now();
+          const trimmedText = text.trim();
+          
+          // 如果3秒内收到相同的总结内容，忽略（防止重复）
+          if (trimmedText === lastSummaryText && (now - lastSummaryTime) < 3000) {
+            console.warn(`⚠️ [数字员工组件] 检测到重复总结（3秒内相同内容），忽略`);
+            return;
+          }
+          
+          // 更新去重记录
+          setLastSummaryText(trimmedText);
+          setLastSummaryTime(now);
+          
+          // 添加Agent触发的数字员工回复到历史
           const assistantMessage: ChatMessage = { 
             role: 'assistant', 
-            content: text.trim() 
+            content: trimmedText 
           };
           setChatHistory(prev => {
             const newHistory = [...prev, assistantMessage];
             console.log(`💬 [数字员工组件] 更新历史，当前总数: ${newHistory.length}`);
             return newHistory;
           });
-          console.log(`📥 [数字员工组件] 已添加消息到历史: ${text.substring(0, 30)}...`);
+          console.log(`📥 [数字员工组件] 已添加消息到历史: ${trimmedText.substring(0, 30)}...`);
           
           // 触发说话动画
           setIsSpeaking(true);
@@ -300,7 +353,12 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   };
 
   const handleAvatarChat = async () => {
-    if (!chatInput.trim() || chatLoading) return;
+    console.log(`🎯 [数字员工] handleAvatarChat 被调用，chatLoading=${chatLoading}, input="${chatInput.substring(0, 30)}..."`);
+    
+    if (!chatInput.trim() || chatLoading) {
+      console.log(`⏭️  [数字员工] 跳过：输入为空或正在加载`);
+      return;
+    }
 
     let messageContent = chatInput;
     let uploadedFilePaths: string[] = [];
@@ -338,6 +396,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     setChatLoading(true);
     setCurrentReply(''); // 清空当前回复，准备接收新回复
     setCurrentReasoning(''); // 清空推理内容
+    reasoningRef.current = ''; // 同时清空 ref
+    setCurrentReasoningExpanded(false); // 重置展开状态
 
     // 添加用户消息到历史
     const newUserMessage: ChatMessage = { role: 'user', content: userMessage };
@@ -346,83 +406,99 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     console.log(`📚 [前端] 发送历史: ${currentHistory.length}条消息`);
     console.log(`📚 [前端] 历史详情:`, JSON.stringify(currentHistory, null, 2));
 
-    // 音频播放队列（按order排序，支持乱序到达）
-    const audioQueue: Map<number, Blob> = new Map(); // order -> blob
-    let currentlyPlaying = false;
-    let nextOrderToPlay = 1; // 下一个要播放的序号
+    // 重置音频播放队列
+    audioQueueRef.current.clear();
+    currentlyPlayingRef.current = false;
+    nextOrderToPlayRef.current = 1;
     
     console.log(`🎵 [播放器] 初始化播放队列，从句子#1开始`);
 
     // 播放下一个音频（按顺序）
     const playNext = () => {
-      if (currentlyPlaying) {
+      if (currentlyPlayingRef.current) {
         console.log(`⏸️  已在播放中，跳过`);
         return;
       }
       
       // 查找下一个应该播放的音频
-      const nextBlob = audioQueue.get(nextOrderToPlay);
+      const nextBlob = audioQueueRef.current.get(nextOrderToPlayRef.current);
       if (!nextBlob) {
-        console.log(`⏸️  等待句子#${nextOrderToPlay}，当前队列: ${Array.from(audioQueue.keys()).join(',')}`);
+        console.log(`⏸️  等待句子#${nextOrderToPlayRef.current}，当前队列: ${Array.from(audioQueueRef.current.keys()).join(',')}`);
         return;
       }
       
-      currentlyPlaying = true;
-      const audioUrl = URL.createObjectURL(nextBlob);
+      // 如果声音关闭，直接跳过所有音频（不创建blob URL）
+      if (!soundEnabled) {
+        console.log(`🔇 声音已关闭，跳过句子#${nextOrderToPlayRef.current}`);
+        audioQueueRef.current.delete(nextOrderToPlayRef.current);
+        nextOrderToPlayRef.current++;
+        setTimeout(() => playNext(), 0);
+        return;
+      }
       
-      console.log(`▶️  开始播放句子#${nextOrderToPlay}，队列中还有: ${Array.from(audioQueue.keys()).filter(k => k > nextOrderToPlay).join(',')}`);
+      currentlyPlayingRef.current = true;
+      let audioUrl: string | null = null;
       
-      if (audioRef.current) {
-        audioRef.current.src = audioUrl;
+      try {
+        audioUrl = URL.createObjectURL(nextBlob);
+        console.log(`▶️  开始播放句子#${nextOrderToPlayRef.current}，队列中还有: ${Array.from(audioQueueRef.current.keys()).filter(k => k > nextOrderToPlayRef.current).join(',')}`);
         
-        audioRef.current.onended = () => {
-          console.log(`✅ 句子#${nextOrderToPlay} 播放完成`);
-          URL.revokeObjectURL(audioUrl);
-          audioQueue.delete(nextOrderToPlay); // 移除已播放的音频
-          nextOrderToPlay++; // 准备播放下一个
-          currentlyPlaying = false;
-          setIsSpeaking(false);
-          // 立即尝试播放下一个
-          setTimeout(() => playNext(), 0);
-        };
-        
-        audioRef.current.onerror = (e) => {
-          console.error(`❌ 句子#${nextOrderToPlay} 播放错误:`, e);
-          URL.revokeObjectURL(audioUrl);
-          audioQueue.delete(nextOrderToPlay);
-          nextOrderToPlay++;
-          currentlyPlaying = false;
-          setIsSpeaking(false);
-          setTimeout(() => playNext(), 0);
-        };
-        
-        // 检查声音开关
-        if (soundEnabled) {
-          setIsSpeaking(true);
-        audioRef.current.play().catch(e => {
-          console.error(`❌ 句子#${nextOrderToPlay} play()失败:`, e);
-          URL.revokeObjectURL(audioUrl);
-          audioQueue.delete(nextOrderToPlay);
-          nextOrderToPlay++;
-          currentlyPlaying = false;
+        if (audioRef.current) {
+          audioRef.current.src = audioUrl;
+          
+          const cleanupAndNext = () => {
+            if (audioUrl) {
+              try {
+                URL.revokeObjectURL(audioUrl);
+              } catch (e) {
+                console.warn('清理blob URL失败:', e);
+              }
+            }
+            audioQueueRef.current.delete(nextOrderToPlayRef.current);
+            nextOrderToPlayRef.current++;
+            currentlyPlayingRef.current = false;
             setIsSpeaking(false);
-          setTimeout(() => playNext(), 0);
-        });
-        } else {
-          // 声音关闭时，模拟播放完成
-          console.log(`🔇 声音已关闭，跳过播放句子#${nextOrderToPlay}`);
-          URL.revokeObjectURL(audioUrl);
-          audioQueue.delete(nextOrderToPlay);
-          nextOrderToPlay++;
-          currentlyPlaying = false;
-          setTimeout(() => playNext(), 0);
+            setTimeout(() => playNext(), 10);
+          };
+          
+          audioRef.current.onended = () => {
+            console.log(`✅ 句子#${nextOrderToPlayRef.current} 播放完成`);
+            cleanupAndNext();
+          };
+          
+          audioRef.current.onerror = (e) => {
+            console.error(`❌ 句子#${nextOrderToPlayRef.current} 播放错误:`, e);
+            cleanupAndNext();
+          };
+          
+          setIsSpeaking(true);
+          audioRef.current.play().catch(e => {
+            console.error(`❌ 句子#${nextOrderToPlayRef.current} play()失败:`, e);
+            cleanupAndNext();
+          });
         }
+      } catch (error) {
+        console.error(`❌ 创建音频失败:`, error);
+        if (audioUrl) {
+          try {
+            URL.revokeObjectURL(audioUrl);
+          } catch (e) {
+            console.warn('清理blob URL失败:', e);
+          }
+        }
+        audioQueueRef.current.delete(nextOrderToPlayRef.current);
+        nextOrderToPlayRef.current++;
+        currentlyPlayingRef.current = false;
+        setIsSpeaking(false);
+        setTimeout(() => playNext(), 10);
       }
     };
 
     try {
       // 使用环境变量或本地地址
       const voiceServerUrl = process.env.NEXT_PUBLIC_VOICE_SERVER_URL || 'http://localhost:8001';
+      console.log(`📤 [前端] 发送请求到数字员工API，deep_thinking=${deepThinking}`);
+      
       const response = await fetch(`${voiceServerUrl}/api/avatar-chat-stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -431,10 +507,13 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
           voice: selectedAvatar,
           history: currentHistory, // 发送当前历史（不包括刚添加的用户消息）
           agent_working: isAgentWorking, // 发送Agentic AI工作状态
-          deep_thinking: deepThinking, // 深度思考模式
+          deep_thinking: deepThinking, // 控制数字员工本身（豆包 LLM）的深度思考
           uploaded_files: uploadedFilePaths // 上传的文件路径
         })
       });
+      
+      console.log(`📥 [前端] 收到响应状态: ${response.ok ? '成功' : '失败'}`);
+      console.log(`🧠 [前端] deepThinking 当前值: ${deepThinking}`);
 
       if (!response.ok) {
         throw new Error('请求失败');
@@ -477,6 +556,9 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
 
               try {
                 const parsed = JSON.parse(data);
+                
+                // 调试：打印所有收到的事件类型
+                console.log(`📦 [前端SSE] 收到事件: type=${parsed.type}, 数据长度=${JSON.stringify(parsed).length}`);
 
                 if (parsed.type === 'text') {
                   fullText += parsed.content;
@@ -488,6 +570,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                       const agentPrompt = completePromptMatch[1].trim();
                       console.log(`🤖 [实时] 检测到完整提示词，立即发送: ${agentPrompt.substring(0, 100)}...`);
                       console.log(`📊 [实时] promptSent当前状态: ${promptSent}`);
+                      console.log(`📊 [实时] fullText: ${fullText.substring(0, 150)}...`);
                       
                       // 立即发送事件到主聊天页面
                       const event = new CustomEvent('avatar_agent_task', {
@@ -497,9 +580,10 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                           avatarImage: avatarImage
                         }
                       });
+                      console.log(`📤 [实时] 即将 dispatchEvent，promptSent=${promptSent}`);
                       window.dispatchEvent(event);
                       promptSent = true;
-                      console.log(`📨 [实时] 已发送 avatar_agent_task 事件，promptSent设为true`);
+                      console.log(`✅ [实时] 已发送 avatar_agent_task 事件，promptSent已设为true`);
                     }
                   } else {
                     console.log(`ℹ️ [实时] 提示词已发送过，跳过`);
@@ -510,7 +594,17 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                   setCurrentReply(displayText);
                 } else if (parsed.type === 'reasoning') {
                   // 处理推理内容
-                  setCurrentReasoning(prev => prev + parsed.content);
+                  console.log('🧠 [前端] 收到 reasoning 事件:', parsed.content?.substring(0, 100));
+                  
+                  // 同时更新 state 和 ref
+                  reasoningRef.current += parsed.content;
+                  console.log('🧠 [前端] reasoningRef 当前长度:', reasoningRef.current.length);
+                  
+                  setCurrentReasoning(prev => {
+                    const newReasoning = prev + parsed.content;
+                    console.log('🧠 [前端] currentReasoning 状态长度:', newReasoning.length);
+                    return newReasoning;
+                  });
                 } else if (parsed.type === 'audio') {
                   const audioData = atob(parsed.data);
                   const bytes = new Uint8Array(audioData.length);
@@ -521,19 +615,24 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                   const order = parsed.order || 1;
                   
                   // 添加到队列Map中
-                  audioQueue.set(order, audioBlob);
+                  audioQueueRef.current.set(order, audioBlob);
 
                   const orderInfo = parsed.order ? `#${parsed.order}/${parsed.total}` : `#${order}`;
-                  console.log(`📥 收到音频 ${orderInfo}，大小: ${bytes.length} bytes，队列中: ${Array.from(audioQueue.keys()).join(',')}`);
+                  console.log(`📥 收到音频 ${orderInfo}，大小: ${bytes.length} bytes，队列中: ${Array.from(audioQueueRef.current.keys()).join(',')}`);
 
                   // 尝试播放（如果轮到它了就会播放）
                   playNext();
                 } else if (parsed.type === 'done') {
                   setCurrentReply('');
+                  
+                  // 使用 ref 获取推理内容（避免 React 状态异步问题）
+                  const savedReasoning = reasoningRef.current;
+                  console.log('💾 [done] 从 reasoningRef 读取: ' + savedReasoning.length + ' 字符');
 
                   if (fullText.trim()) {
                     console.log(`📝 数字员工完整回复: ${fullText}`);
                     console.log(`📊 promptSent状态: ${promptSent}`);
+                    console.log(`🧠 当前推理内容长度: ${savedReasoning.length}`);
                     
                     // 如果在流式过程中还没有发送提示词，现在检测并发送
                     if (!promptSent) {
@@ -565,16 +664,40 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                     // 添加到历史（移除提示词部分：双花括号和不完整的花括号，并包含推理内容）
                     const displayText = fullText.replace(/\{\{[^}]*\}\}?/g, '').replace(/\{[^}]*$/g, '').trim();
                     if (displayText) {
+                      const newHistoryIndex = chatHistory.length;
+                      
+                      // 修复：只有当 savedReasoning 有实际内容时才保存（排除空字符串）
+                      const finalReasoningContent = savedReasoning && savedReasoning.trim().length > 0 ? savedReasoning : undefined;
+                      
                       const assistantMessage: ChatMessage = { 
                         role: 'assistant', 
                         content: displayText,
-                        reasoningContent: currentReasoning || undefined
+                        reasoningContent: finalReasoningContent
                       };
-                      setChatHistory(prev => [...prev, assistantMessage]);
-                      console.log(`✅ 添加到历史: ${displayText.substring(0, 30)}...`);
-                      if (currentReasoning) {
-                        console.log(`🧠 包含推理内容: ${currentReasoning.length}字符`);
+                      
+                      console.log(`✅ 准备添加到历史（索引${newHistoryIndex}）: ${displayText.substring(0, 30)}...`);
+                      console.log(`🧠 savedReasoning长度: ${savedReasoning.length}`);
+                      console.log(`🧠 finalReasoningContent: ${finalReasoningContent ? finalReasoningContent.substring(0, 50) + '...' : '无'}`);
+                      
+                      setChatHistory(prev => {
+                        const newHistory = [...prev, assistantMessage];
+                        console.log(`📚 历史消息更新，总数: ${newHistory.length}`);
+                        console.log(`📚 最新消息的 reasoningContent: ${assistantMessage.reasoningContent ? '有(' + assistantMessage.reasoningContent.length + '字符)' : '无'}`);
+                        return newHistory;
+                      });
+                      
+                      // 如果有推理内容，默认展开
+                      if (finalReasoningContent) {
+                        console.log(`🔓 设置消息#${newHistoryIndex}推理内容为展开状态`);
+                        setExpandedReasoning(prev => {
+                          const newState = {...prev, [newHistoryIndex]: true};
+                          console.log(`📊 展开状态:`, newState);
+                          return newState;
+                        });
+                      } else {
+                        console.log(`⚠️ 没有推理内容，不设置展开状态`);
                       }
+                      
                       if (promptSent) {
                         console.log(`📨 本次对话已触发Agentic AI任务`);
                       }
@@ -583,7 +706,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                     }
                   }
                   setCurrentReasoning(''); // 清空推理内容
-                  console.log(`✅ SSE完成，队列中还有 ${audioQueue.size} 个音频待播放: ${Array.from(audioQueue.keys()).join(',')}`);
+                  reasoningRef.current = ''; // 同时清空 ref
+                  console.log(`✅ SSE完成，队列中还有 ${audioQueueRef.current.size} 个音频待播放: ${Array.from(audioQueueRef.current.keys()).join(',')}`);
                   // 继续尝试播放剩余音频
                   playNext();
                 } else if (parsed.type === 'error') {
@@ -795,7 +919,12 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
             {/* 聊天消息列表 */}
             {(chatHistory.length > 0 || currentReply) && (
               <>
-                {chatHistory.map((msg, idx) => (
+                {chatHistory.map((msg, idx) => {
+                  // 调试：打印每条消息的 reasoningContent 状态
+                  if (msg.role === 'assistant') {
+                    console.log(`🔍 [渲染] 消息#${idx}: content=${msg.content.substring(0, 30)}..., reasoningContent=${msg.reasoningContent ? msg.reasoningContent.length + '字符' : '无'}`);
+                  }
+                  return (
                   <div key={idx} className={`mb-4 flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {/* 数字员工消息：左侧显示头像 */}
                     {msg.role === 'assistant' && (
@@ -812,19 +941,29 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                     )}
                     
                     <div className={`max-w-[75%] ${msg.role === 'user' ? '' : 'w-full'}`}>
-                      {/* 推理过程 */}
+                      {/* 推理过程（历史消息） - 灰色样式 */}
                       {msg.role === 'assistant' && msg.reasoningContent && (
-                        <div className="mb-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Brain size={18} className="text-purple-600 dark:text-purple-400" />
-                            <span className="font-bold text-purple-900 dark:text-purple-100 text-sm">🤖 深度推理过程</span>
-                            <span className="ml-auto text-xs px-2 py-1 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded-full">
-                              智能推理
+                        <div className="mb-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                          <button
+                            onClick={() => {
+                              console.log(`🔄 切换消息#${idx}的推理展开状态: ${!expandedReasoning[idx]}`);
+                              setExpandedReasoning(prev => ({...prev, [idx]: !prev[idx]}));
+                            }}
+                            className="w-full flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                          >
+                            <Brain size={14} className="text-gray-500 dark:text-gray-400 flex-shrink-0" />
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              模型思考过程
                             </span>
-                          </div>
-                          <div className="text-xs text-purple-800 dark:text-purple-200 whitespace-pre-wrap leading-relaxed bg-white/60 dark:bg-black/20 rounded p-3 border border-purple-200 dark:border-purple-800">
-                            {msg.reasoningContent}
-                          </div>
+                            <span className="ml-auto text-xs text-gray-500 dark:text-gray-500">
+                              [{expandedReasoning[idx] ? '收起' : '展开'}]
+                            </span>
+                          </button>
+                          {expandedReasoning[idx] && (
+                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap font-mono leading-relaxed">
+                              {msg.reasoningContent}
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -846,7 +985,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                       </div>
                     )}
                   </div>
-                ))}
+                  );
+                })}
                 
                 {/* 当前正在生成的回复 */}
                 {(currentReply || currentReasoning) && (
@@ -862,19 +1002,26 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                       </div>
                     </div>
                     <div className="max-w-[75%] w-full">
-                      {/* 推理过程（流式） */}
+                      {/* 推理过程（流式） - 灰色样式，可展开/收起 */}
                       {currentReasoning && (
-                        <div className="mb-3 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-2 border-purple-300 dark:border-purple-700 rounded-lg p-4 shadow-sm">
-                          <div className="flex items-center gap-2 mb-3">
-                            <Brain size={18} className="text-purple-600 dark:text-purple-400 animate-pulse" />
-                            <span className="font-bold text-purple-900 dark:text-purple-100 text-sm">🤖 深度推理中...</span>
-                            <span className="ml-auto text-xs px-2 py-1 bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200 rounded-full animate-pulse">
-                              思考中
+                        <div className="mb-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                          <button
+                            onClick={() => setCurrentReasoningExpanded(!currentReasoningExpanded)}
+                            className="w-full flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                          >
+                            <Brain size={14} className="text-gray-500 dark:text-gray-400 animate-pulse flex-shrink-0" />
+                            <span className="text-xs text-gray-600 dark:text-gray-400 animate-pulse">
+                              思考中...
                             </span>
-                          </div>
-                          <div className="text-xs text-purple-800 dark:text-purple-200 whitespace-pre-wrap leading-relaxed bg-white/60 dark:bg-black/20 rounded p-3 border border-purple-200 dark:border-purple-800">
-                            {currentReasoning}
-                          </div>
+                            <span className="ml-auto text-xs text-gray-500 dark:text-gray-500">
+                              [{currentReasoningExpanded ? '收起' : '展开'}]
+                            </span>
+                          </button>
+                          {currentReasoningExpanded && (
+                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap font-mono leading-relaxed max-h-48 overflow-y-auto">
+                              {currentReasoning}
+                            </div>
+                          )}
                         </div>
                       )}
                       
@@ -942,7 +1089,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
               <button
                 onClick={() => setDeepThinking(!deepThinking)}
                 className={`btn-ghost text-sm ${deepThinking ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : ''}`}
-                title="深度思考模式（使用更强大的推理能力）"
+                title="深度思考模式（数字员工使用更强推理能力）"
               >
                 <Brain size={16} className={deepThinking ? 'text-purple-600' : ''} />
                 深度思考

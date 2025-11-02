@@ -8,6 +8,33 @@ import { visitWebsite, automateWebsite, extractWebData } from "./browser-automat
 import { analyzeImage, compareImages } from "./image-analyzer";
 import { createMarkdown, createWord, createTextFile, createExcel, createJSON } from "./document-creator";
 import { registerDownload } from "./download-registry";
+import { uploadFile } from "./blob-storage";
+
+/**
+ * 上传文件并返回下载URL
+ * 优先使用云存储，降级到本地存储
+ */
+async function uploadAndGetUrl(buffer: Buffer, filename: string, mime: string): Promise<string> {
+  try {
+    // 尝试使用新的 blob-storage（支持云存储）
+    const url = await uploadFile(buffer, filename, mime);
+    
+    // 如果返回的是完整 URL（Vercel Blob 或 Data URL），直接返回
+    if (url.startsWith('http') || url.startsWith('data:')) {
+      return url;
+    }
+    
+    // 如果是相对路径，补全为完整 URL
+    const baseUrl = resolveBaseUrl();
+    return `${baseUrl}${url}`;
+  } catch (error) {
+    console.warn('⚠️ 云存储上传失败，使用降级方案:', error);
+    // 降级到旧的 registerDownload
+    const token = await registerDownload(buffer, filename, mime);
+    const baseUrl = resolveBaseUrl();
+    return `${baseUrl}/api/download?token=${token}`;
+  }
+}
 import { listDirectory, createDirectory, deleteFile, moveFile, copyFileOp, renameFile, getFileInfo } from "./file-operations";
 import { callAPI, translateText, dateTimeOperation, processText, convertData } from "./advanced-tools";
 import { createBarChart, createLineChart, createPieChart } from "./visualization-tools";
@@ -1296,10 +1323,8 @@ async function createDocumentTool(filename: string, content: string, format: str
 
     if (!buffer) throw new Error('生成文档失败');
 
-    const token = await registerDownload(buffer, outFilename, mime);
-    // 生成完整的可访问 URL（在生产环境中会使用实际域名）
-    const baseUrl = resolveBaseUrl();
-    const download_url = `${baseUrl}/api/download?token=${token}`;
+    // 使用新的云存储上传
+    const download_url = await uploadAndGetUrl(buffer, outFilename, mime);
 
     return {
       success: true,
@@ -1505,10 +1530,8 @@ async function createChartTool(chartType: string, labels: string[], values: numb
     const html = `<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${titleText}</title>\n<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>\n</head>\n<body style="padding:20px;background:#f5f5f5">\n<div style="max-width:900px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)">\n<h1 style="color:#1e3a8a;margin-bottom:20px">${titleText}</h1>\n<canvas id="c"></canvas>\n</div>\n<script>\nconst ctx = document.getElementById('c');\nnew Chart(ctx, ${JSON.stringify({ type: chartType, data, options: { responsive: true } })});\n</script>\n</body>\n</html>`;
     const buffer = Buffer.from(html, 'utf-8');
     const filename = `${chartType}_chart_${Date.now()}.html`;
-    const token = await registerDownload(buffer, filename, 'text/html; charset=utf-8');
-    // 生成完整的可访问 URL（在生产环境中会使用实际域名）
-    const baseUrl = resolveBaseUrl();
-    const download_url = `${baseUrl}/api/download?token=${token}`;
+    // 使用新的云存储上传
+    const download_url = await uploadAndGetUrl(buffer, filename, 'text/html; charset=utf-8');
 
     return {
       success: true,
@@ -1757,19 +1780,27 @@ async function createPresentation(
     );
     
     // 4. 添加封面（如果提供了总标题）
+    let slideOffset = 0;
     if (presentationTitle) {
       await addTitleSlide(accessToken, pptxName, presentationTitle);
       console.log(`✅ 添加封面: ${presentationTitle}`);
+      slideOffset = 1; // 有封面时，内容幻灯片从索引 2 开始
     }
     
     // 5. 添加内容幻灯片
     for (let i = 0; i < slides.length; i++) {
       const slide = slides[i];
-      await addContentSlide(accessToken, pptxName, slide.title, slide.content, i + 1);
+      const slideIndex = i + 1 + slideOffset; // 正确计算幻灯片索引
+      await addContentSlide(accessToken, pptxName, slide.title, slide.content, slideIndex);
       console.log(`✅ 添加幻灯片 ${i + 1}/${slides.length}: ${slide.title}`);
     }
     
-    // 6. 下载生成的 PPTX 文件
+    // 6. 等待 Aspose 完成处理（重要！）
+    console.log('⏳ 等待 Aspose 处理完成...');
+    await new Promise(resolve => setTimeout(resolve, 2000)); // 等待 2 秒
+    
+    // 7. 下载生成的 PPTX 文件
+    console.log('📥 开始下载 PPTX 文件...');
     const downloadResponse = await axios.get(
       `https://api.aspose.cloud/v3.0/slides/${pptxName}`,
       {
@@ -1781,7 +1812,15 @@ async function createPresentation(
       }
     );
     
-    // 7. 保存文件
+    // 验证文件大小
+    const fileSize = downloadResponse.data.byteLength || downloadResponse.data.length;
+    console.log(`📦 下载的文件大小: ${(fileSize / 1024).toFixed(2)} KB`);
+    
+    if (fileSize < 10000) {
+      console.warn(`⚠️ 警告：文件大小异常小 (${fileSize} bytes)，可能不完整`);
+    }
+    
+    // 8. 保存文件
     const outputDir = path.join(process.cwd(), 'outputs');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
@@ -1789,13 +1828,13 @@ async function createPresentation(
     
     const outputPath = path.join(outputDir, pptxName);
     fs.writeFileSync(outputPath, downloadResponse.data);
+    console.log(`💾 文件已保存: ${outputPath}`);
     
-    // 8. 注册下载
+    // 9. 注册下载
     const fileBuffer = Buffer.from(downloadResponse.data);
-    const downloadToken = await registerDownload(fileBuffer, pptxName, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
-    const downloadUrl = `/api/download/${downloadToken}`;
+    const downloadUrl = await uploadAndGetUrl(fileBuffer, pptxName, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
     
-    console.log(`✅ PPT 生成成功: ${pptxName}`);
+    console.log(`✅ PPT 生成成功: ${pptxName}, 文件大小: ${(fileSize / 1024).toFixed(2)} KB`);
     
     return {
       success: true,
@@ -1803,6 +1842,7 @@ async function createPresentation(
       path: outputPath,
       downloadUrl: downloadUrl,
       slides: slides.length,
+      fileSize: `${(fileSize / 1024).toFixed(2)} KB`,
       note: `✅ 演示文稿创建成功，共 ${slides.length} 张幻灯片`,
     };
     
@@ -1883,11 +1923,11 @@ async function addContentSlide(
     }
   );
   
-  const actualSlideIndex = slideIndex + 1; // 考虑封面
+  // 使用传入的 slideIndex（已经在调用处正确计算）
   
   // 添加标题文本框
   await axios.post(
-    `https://api.aspose.cloud/v3.0/slides/${pptxName}/slides/${actualSlideIndex}/shapes`,
+    `https://api.aspose.cloud/v3.0/slides/${pptxName}/slides/${slideIndex}/shapes`,
     {
       shapeType: 'Rectangle',
       x: 50,
@@ -1909,7 +1949,7 @@ async function addContentSlide(
   
   // 添加内容文本框
   await axios.post(
-    `https://api.aspose.cloud/v3.0/slides/${pptxName}/slides/${actualSlideIndex}/shapes`,
+    `https://api.aspose.cloud/v3.0/slides/${pptxName}/slides/${slideIndex}/shapes`,
     {
       shapeType: 'Rectangle',
       x: 50,
@@ -2020,8 +2060,7 @@ async function convertDocument(
       'png': 'image/png',
       'jpg': 'image/jpeg',
     };
-    const downloadToken = await registerDownload(outputBuffer, outputName, mimeMap[outputFormat] || 'application/octet-stream');
-    const downloadUrl = `/api/download/${downloadToken}`;
+    const downloadUrl = await uploadAndGetUrl(outputBuffer, outputName, mimeMap[outputFormat] || 'application/octet-stream');
     const fileSize = (fs.statSync(outputPath).size / 1024).toFixed(2);
     
     console.log(`✅ 文档转换成功: ${outputName}`);
@@ -2238,8 +2277,7 @@ async function generateQRCode(text: string, filename: string, size: number = 300
     
     // 4. 注册下载
     const fileBuffer = Buffer.from(response.data);
-    const downloadToken = await registerDownload(fileBuffer, outputName, 'image/png');
-    const downloadUrl = `/api/download/${downloadToken}`;
+    const downloadUrl = await uploadAndGetUrl(fileBuffer, outputName, 'image/png');
     const fileSize = (fs.statSync(outputPath).size / 1024).toFixed(2);
     
     console.log(`✅ 二维码生成成功: ${outputName}`);

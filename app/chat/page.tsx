@@ -4,10 +4,12 @@ import NextImage from 'next/image';
 import { Send, User, Bot, Loader2, Wrench, Check, ChevronDown, ChevronUp, Brain, Upload, Image, FileText, X, Search, UserCircle2, Volume2, Mic, MicOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import JsonView from '../../components/JsonView';
+import FilePreview from '../../components/FilePreview';
 import LoginPrompt from '../../components/LoginPrompt';
 import LoginModal from '../../components/LoginModal';
 import OnboardingGuide from '../../components/OnboardingGuide';
 import ResetOnboarding from '../../components/ResetOnboarding';
+import Linkify from '../../components/Linkify';
 
 type ToolCall = {
   tool: string;
@@ -20,8 +22,8 @@ type Message = {
   content: string;
   toolCalls?: ToolCall[];
   thinkingSteps?: string[];
-  modelThinking?: string; // 模型原生的thinking内容（Ollama等）
   reasoningContent?: string; // Agentic AI的推理过程（GPT-5等推理模型）
+  modelThinking?: string; // 模型思考过程
   fromAvatar?: boolean; // 标记消息是否来自数字员工
   avatarName?: string; // 数字员工名字
   avatarImage?: string; // 数字员工头像路径
@@ -53,12 +55,31 @@ function base64ToBlob(base64: string, mimeType: string): Blob {
 }
 
 export default function ChatPage() {
+  // 使用固定的初始值以避免 hydration 错误
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [deepThinking, setDeepThinking] = useState(false);
+  
+  // 深度思考设置：开关 + 等级（low/medium/high）
+  // 使用固定的初始值以避免 hydration 错误
+  const [deepThinkingEnabled, setDeepThinkingEnabled] = useState<boolean>(false);
+  const [deepThinkingLevel, setDeepThinkingLevel] = useState<'low'|'medium'|'high'>('medium');
+  
+  // 在客户端挂载后从 localStorage 读取
+  useEffect(() => {
+    const savedEnabled = localStorage.getItem('deep_thinking_enabled');
+    if (savedEnabled !== null) {
+      setDeepThinkingEnabled(savedEnabled === 'true');
+    }
+    
+    const savedLevel = localStorage.getItem('deep_thinking_level') as 'low'|'medium'|'high' | null;
+    if (savedLevel) {
+      setDeepThinkingLevel(savedLevel);
+    }
+  }, []);
+  
   const [browserSearch, setBrowserSearch] = useState(false);
-  const [selectedModel, setSelectedModel] = useState<'openai' | 'gpt4-turbo' | 'gpt5-thinking' | 'gpt5-pro' | 'claude'>('openai');
+  const [selectedModel, setSelectedModel] = useState<'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude'>('openai');
   const [avatarEnabled, setAvatarEnabled] = useState(true); // 数字员工功能开关（默认开启）
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false); // 登录提示弹窗
@@ -79,6 +100,67 @@ export default function ChatPage() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const isSubmittingRef = useRef(false); // 防止重复提交标记
+  const messagesRef = useRef<Message[]>(messages); // 保持最新 messages 的引用
+  const selectedModelRef = useRef(selectedModel); // 保持最新 selectedModel 的引用
+  
+  // 更新 messagesRef，确保总是指向最新的 messages
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  
+  // 更新 selectedModelRef，确保总是指向最新的 selectedModel
+  useEffect(() => {
+    selectedModelRef.current = selectedModel;
+  }, [selectedModel]);
+
+  // 在客户端挂载后从 localStorage 恢复聊天记录
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('chat_messages');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setMessages(parsed);
+        console.log(`💾 [聊天记录] 从 localStorage 恢复了 ${parsed.length} 条消息`);
+      }
+    } catch (e) {
+      console.error('恢复聊天记录失败:', e);
+    }
+  }, []); // 只在挂载时执行一次
+
+  // 同步深度思考设置到 localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('deep_thinking_enabled', String(deepThinkingEnabled));
+      localStorage.setItem('deep_thinking_level', deepThinkingLevel);
+    }
+  }, [deepThinkingEnabled, deepThinkingLevel]);
+
+  // 保存聊天记录到 localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && messages.length > 0) {
+      try {
+        localStorage.setItem('chat_messages', JSON.stringify(messages));
+        console.log(`💾 [聊天记录] 已保存 ${messages.length} 条消息到 localStorage`);
+      } catch (e) {
+        console.error('保存聊天记录失败:', e);
+      }
+    }
+  }, [messages]);
+
+  // 添加浏览器级别的提示（刷新/关闭页面/切换标签时）
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (loading) {
+        e.preventDefault();
+        e.returnValue = 'Agentic AI 任务正在执行中，离开页面将终止任务。是否确认离开？';
+        return e.returnValue;
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [loading]);
 
   useEffect(() => {
     audioRef.current = new Audio();
@@ -98,16 +180,21 @@ export default function ChatPage() {
       const { prompt, avatarName, avatarImage } = event.detail;
       const now = Date.now();
       
+      console.log(`📨 [主页面] 收到 avatar_agent_task 事件: ${prompt.substring(0, 50)}...`);
+      console.log(`📊 [主页面] isSubmittingRef.current = ${isSubmittingRef.current}`);
+      console.log(`📊 [主页面] lastProcessedPrompt = "${lastProcessedPrompt.substring(0, 30)}..."`);
+      console.log(`📊 [主页面] 时间差 = ${now - lastProcessedTime}ms`);
+      
       // 防重复：如果1秒内收到相同的提示词，忽略
       if (prompt === lastProcessedPrompt && (now - lastProcessedTime) < 1000) {
-        console.log(`⚠️ 检测到重复任务，忽略: ${prompt.substring(0, 50)}...`);
+        console.log(`⚠️ [主页面] 检测到重复任务（1秒内相同提示词），忽略`);
         return;
       }
       
       lastProcessedPrompt = prompt;
       lastProcessedTime = now;
       
-      console.log(`📨 收到数字员工任务: ${avatarName} - ${prompt.substring(0, 50)}...`);
+      console.log(`✅ [主页面] 通过防重复检查，继续处理任务`);
       
       // 创建一个来自数字员工的消息
       const avatarMessage: Message = {
@@ -118,15 +205,26 @@ export default function ChatPage() {
         avatarImage: avatarImage
       };
       
-      // 添加到消息列表并发送给 Agentic AI
-      setMessages(prev => {
-        const newMessages = [...prev, avatarMessage];
-        // 触发发送
+      // 防止重复提交：如果正在提交，忽略
+      if (isSubmittingRef.current) {
+        console.log(`⚠️ 检测到重复提交，忽略（正在处理中）`);
+        return;
+      }
+      
+      isSubmittingRef.current = true;
+      
+      // 添加到消息列表（使用 ref 获取最新状态）
+      const newMessages = [...messagesRef.current, avatarMessage];
+      setMessages(newMessages);
+      
+      // 延迟提交，确保状态已更新
+      setTimeout(() => {
+        handleSubmitFromAvatar(newMessages);
+        // 1秒后重置标记（允许新任务）
         setTimeout(() => {
-          handleSubmitFromAvatar(newMessages);
-        }, 100);
-        return newMessages;
-      });
+          isSubmittingRef.current = false;
+        }, 1000);
+      }, 100);
     };
 
     window.addEventListener('avatar_agent_task' as any, handleAvatarTask as any);
@@ -134,7 +232,7 @@ export default function ChatPage() {
     return () => {
       window.removeEventListener('avatar_agent_task' as any, handleAvatarTask as any);
     };
-  }, []);
+  }, []); // 空依赖，只注册一次
 
   const ensureAudioUnlocked = async () => {
     try {
@@ -222,16 +320,26 @@ export default function ChatPage() {
 
     try {
       await ensureAudioUnlocked();
+      
+      // 使用 ref 获取最新的 selectedModel（避免闭包陷阱）
+      const currentModel = selectedModelRef.current;
+      console.log(`🚀 [数字员工任务] 使用模型: ${currentModel}`);
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: newMessages,
-          deepThinking: deepThinking,
+          // 兼容旧字段
+          deepThinking: deepThinkingEnabled,
+          // 新字段：显式控制 GPT-5 Responses 的 reasoning.effort
+          reasoning: deepThinkingEnabled ? { effort: deepThinkingLevel } : { effort: 'low' },
+          deepThinkingEnabled,
+          deepThinkingLevel,
           browserSearch: browserSearch,
           avatarEnabled: avatarEnabled,
           avatarVoice: getSelectedVoice(),
-          modelProvider: selectedModel,
+          modelProvider: currentModel, // 使用 ref 中的最新值
           hasFiles: false
         }),
       });
@@ -246,13 +354,67 @@ export default function ChatPage() {
       let currentToolCalls: ToolCall[] = [];
       let currentThinkingSteps: string[] = [];
       let modelThinkingContent = '';
-      let reasoningContent = '';
+      let reasoningContent = '';  // Agentic AI推理内容
       let sseBuffer = '';
+
+      // === 新增：avatar 总结只触发一次（只在最终阶段触发） ===
+      // 会话内暂存最后一条 avatar_audio 的内容与元信息
+      let _avatarFinalReady = false;         // 是否进入"可安全输出最终总结"的阶段（收到 reasoning_complete 或流结束）
+      let _avatarSummaryPlayed = false;      // 已经触发过最终总结
+      let _avatarLastSummary: null | {
+        text: string;
+        voice: string;
+        duration?: number;
+        audioBase64?: string;
+      } = null;
+
+      // 统一封装：真正触发一次 avatar 总结（仅在满足条件且未播过时执行）
+      const _playAvatarSummaryOnce = async () => {
+        if (_avatarSummaryPlayed || !_avatarLastSummary) return;
+        const { text, voice, duration, audioBase64 } = _avatarLastSummary;
+        if (!text || !text.trim()) return;
+        _avatarSummaryPlayed = true;
+
+        // 1) 通知数字员工组件显示总结气泡
+        try {
+          window.dispatchEvent(new CustomEvent('agent_avatar_message', {
+            detail: {
+              type: 'avatar_summary',
+              text: text.trim(),
+              voice: voice,
+              duration: duration || 3000
+            }
+          }));
+        } catch {}
+
+        // 2) 如果带音频则播放（与原逻辑一致）
+        if (audioBase64) {
+          try {
+            await ensureAudioUnlocked();
+            const audioBlob = base64ToBlob(audioBase64, 'audio/wav');
+            const audioUrl = URL.createObjectURL(audioBlob);
+            if (audioRef.current) {
+              audioRef.current.src = audioUrl;
+              audioRef.current.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+              };
+              await audioRef.current.play().catch(() => {});
+            }
+          } catch {}
+        }
+      };
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            // SSE 读流结束：兜底触发一次（若此前未播且有缓存）
+            _avatarFinalReady = true;
+            if (!_avatarSummaryPlayed && _avatarLastSummary) {
+              await _playAvatarSummaryOnce();
+            }
+            break;
+          }
 
           const chunk = decoder.decode(value, { stream: true });
           sseBuffer += chunk;
@@ -291,6 +453,7 @@ export default function ChatPage() {
                     thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                   }]);
                 } else if (parsed.type === 'reasoning_complete' && parsed.content) {
+                  // 记录推理完整体
                   reasoningContent = parsed.content;
                   setMessages([...newMessages, { 
                     role: 'assistant', 
@@ -300,6 +463,12 @@ export default function ChatPage() {
                     toolCalls: currentToolCalls.length > 0 ? currentToolCalls : undefined,
                     thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                   }]);
+                  
+                  // 标记可以安全输出最终总结
+                  _avatarFinalReady = true;
+                  if (!_avatarSummaryPlayed && _avatarLastSummary) {
+                    await _playAvatarSummaryOnce();
+                  }
                 } else if (parsed.type === 'thinking' && parsed.content) {
                   currentThinkingSteps.push(parsed.content);
                   setThinkingProcess(prev => [...prev, parsed.content]);
@@ -308,15 +477,6 @@ export default function ChatPage() {
                     content: assistantMessage || '正在深度思考...',
                     thinkingSteps: currentThinkingSteps
                   }]);
-                } else if (parsed.type === 'model_thinking' && parsed.content) {
-                  modelThinkingContent += parsed.content;
-                  setMessages([...newMessages, { 
-                    role: 'assistant', 
-                    content: assistantMessage || '模型正在思考...',
-                    modelThinking: modelThinkingContent,
-                    toolCalls: currentToolCalls.length > 0 ? currentToolCalls : undefined,
-                    thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
-                  }]);
                 } else if (parsed.type === 'tool_call') {
                   currentToolCalls.push({ tool: parsed.tool, args: parsed.args });
                   setMessages([...newMessages, { 
@@ -324,7 +484,6 @@ export default function ChatPage() {
                     content: assistantMessage || '正在使用工具...',
                     toolCalls: currentToolCalls,
                     reasoningContent: reasoningContent || undefined,
-                    modelThinking: modelThinkingContent || undefined,
                     thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                   }]);
                 } else if (parsed.type === 'tool_result') {
@@ -336,7 +495,6 @@ export default function ChatPage() {
                       content: assistantMessage,
                       toolCalls: currentToolCalls,
                       reasoningContent: reasoningContent || undefined,
-                      modelThinking: modelThinkingContent || undefined,
                       thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                     }]);
                   }
@@ -344,29 +502,26 @@ export default function ChatPage() {
                   // 数字员工开始总结
                   console.log('🎤 [数字员工任务] 数字员工开始总结...');
                 } else if (parsed.type === 'avatar_audio') {
-                  // 数字员工总结完成
-                  const voiceName = getVoiceName(parsed.voice || getSelectedVoice());
+                  // 仅缓存"最后一条"avatar 总结，不立刻播报
                   const currentVoice = parsed.voice || getSelectedVoice();
-                  console.log(`🎤 [数字员工任务] 数字员工总结完成 [${voiceName}]: ${parsed.audioSize} 字节`);
-                  console.log(`📝 [数字员工任务] 总结文本:`, parsed.summaryText);
-                  
-                  // ⚠️ 注意：不在这里发送 avatar_summary 事件
-                  // 原因：avatar_summary 应该只在主聊天流程中发送一次（见下方 handleSubmit 中的处理）
-                  // 这里只负责播放第一次任务规划时的语音
-                  console.log(`⏭️ [数字员工任务] 跳过发送 avatar_summary（任务规划阶段，不是总结）`);
-                  
-                  // 播放规划语音
-                  await ensureAudioUnlocked();
-                  const audioBlob = base64ToBlob(parsed.audioBase64, 'audio/wav');
-                  const audioUrl = URL.createObjectURL(audioBlob);
-                  if (audioRef.current) {
-                    audioRef.current.src = audioUrl;
-                    audioRef.current.onended = () => {
-                      URL.revokeObjectURL(audioUrl);
+                  const text = (parsed.summaryText || '').trim();
+
+                  // 可选的"内容级"过滤：丢弃早期的"马上处理"类型（防止误判为最终总结）
+                  if (text && /^马上处理/.test(text)) {
+                    // 仍允许后续的真正总结覆盖缓存
+                    // 不写入 _avatarLastSummary，直接跳过
+                  } else {
+                    _avatarLastSummary = {
+                      text,
+                      voice: currentVoice,
+                      duration: parsed.duration,
+                      audioBase64: parsed.audioBase64
                     };
-                    await audioRef.current.play().catch(e => {
-                      console.error('播放规划音频失败:', e);
-                    });
+                  }
+
+                  // 如果已经进入最终阶段（_avatarFinalReady），且还没播过，则立刻播一次
+                  if (_avatarFinalReady && !_avatarSummaryPlayed) {
+                    await _playAvatarSummaryOnce();
                   }
                 } else if (parsed.type === 'audio_segment' && parsed.audioBase64) {
                   // 处理音频...
@@ -378,9 +533,12 @@ export default function ChatPage() {
         }
       }
 
+      // 兜底：若服务端异常或前端未拼出任何文本，显示简洁错误信息
       setMessages([...newMessages, { 
         role: 'assistant', 
-        content: assistantMessage,
+        content: assistantMessage && assistantMessage.trim().length > 0 
+          ? assistantMessage 
+          : '响应为空，请重试',
         toolCalls: currentToolCalls.length > 0 ? currentToolCalls : undefined,
         reasoningContent: reasoningContent || undefined,
         modelThinking: modelThinkingContent || undefined,
@@ -439,16 +597,26 @@ export default function ChatPage() {
 
     try {
       await ensureAudioUnlocked();
+      
+      // 使用 ref 获取最新的 selectedModel（保持代码一致性）
+      const currentModel = selectedModelRef.current;
+      console.log(`🚀 [主聊天] 使用模型: ${currentModel}`);
+      
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           messages: newMessages,
-          deepThinking: deepThinking,
+          // 兼容旧字段
+          deepThinking: deepThinkingEnabled,
+          // 新字段：显式控制 GPT-5 Responses 的 reasoning.effort
+          reasoning: deepThinkingEnabled ? { effort: deepThinkingLevel } : { effort: 'low' },
+          deepThinkingEnabled,
+          deepThinkingLevel,
           browserSearch: browserSearch,
           avatarEnabled: avatarEnabled,
           avatarVoice: getSelectedVoice(), // 从localStorage读取
-          modelProvider: selectedModel,
+          modelProvider: currentModel, // 使用 ref 中的最新值
           hasFiles: uploadedFiles.length > 0
         }),
       });
@@ -466,10 +634,64 @@ export default function ChatPage() {
       let reasoningContent = '';  // Agentic AI推理内容
       let sseBuffer = '';
 
+      // === 新增：avatar 总结只触发一次（只在最终阶段触发） ===
+      // 会话内暂存最后一条 avatar_audio 的内容与元信息
+      let _avatarFinalReady = false;         // 是否进入"可安全输出最终总结"的阶段（收到 reasoning_complete 或流结束）
+      let _avatarSummaryPlayed = false;      // 已经触发过最终总结
+      let _avatarLastSummary: null | {
+        text: string;
+        voice: string;
+        duration?: number;
+        audioBase64?: string;
+      } = null;
+
+      // 统一封装：真正触发一次 avatar 总结（仅在满足条件且未播过时执行）
+      const _playAvatarSummaryOnce = async () => {
+        if (_avatarSummaryPlayed || !_avatarLastSummary) return;
+        const { text, voice, duration, audioBase64 } = _avatarLastSummary;
+        if (!text || !text.trim()) return;
+        _avatarSummaryPlayed = true;
+
+        // 1) 通知数字员工组件显示总结气泡
+        try {
+          window.dispatchEvent(new CustomEvent('agent_avatar_message', {
+            detail: {
+              type: 'avatar_summary',
+              text: text.trim(),
+              voice: voice,
+              duration: duration || 3000
+            }
+          }));
+        } catch {}
+
+        // 2) 如果带音频则播放（与原逻辑一致）
+        if (audioBase64) {
+          try {
+            await ensureAudioUnlocked();
+            const audioBlob = base64ToBlob(audioBase64, 'audio/wav');
+            const audioUrl = URL.createObjectURL(audioBlob);
+            if (audioRef.current) {
+              audioRef.current.src = audioUrl;
+              audioRef.current.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+              };
+              await audioRef.current.play().catch(() => {});
+            }
+          } catch {}
+        }
+      };
+
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
-          if (done) break;
+          if (done) {
+            // SSE 读流结束：兜底触发一次（若此前未播且有缓存）
+            _avatarFinalReady = true;
+            if (!_avatarSummaryPlayed && _avatarLastSummary) {
+              await _playAvatarSummaryOnce();
+            }
+            break;
+          }
 
           const chunk = decoder.decode(value, { stream: true });
           sseBuffer += chunk;
@@ -509,7 +731,7 @@ export default function ChatPage() {
                     thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                   }]);
                 } else if (parsed.type === 'reasoning_complete' && parsed.content) {
-                  // 处理完整的Agentic AI推理内容
+                  // 记录推理完整体
                   reasoningContent = parsed.content;
                   setMessages([...newMessages, { 
                     role: 'assistant', 
@@ -519,6 +741,12 @@ export default function ChatPage() {
                     toolCalls: currentToolCalls.length > 0 ? currentToolCalls : undefined,
                     thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                   }]);
+                  
+                  // 标记可以安全输出最终总结
+                  _avatarFinalReady = true;
+                  if (!_avatarSummaryPlayed && _avatarLastSummary) {
+                    await _playAvatarSummaryOnce();
+                  }
                 } else if (parsed.type === 'thinking' && parsed.content) {
                   // 处理思考过程 - 保存到消息中
                   currentThinkingSteps.push(parsed.content);
@@ -584,42 +812,26 @@ export default function ChatPage() {
                   // 数字员工开始第二次回答（静默处理）
                   console.log('🎤 数字员工开始总结...');
                 } else if (parsed.type === 'avatar_audio') {
-                  // LLM-TTS双向流式完成（任务总结），发送 avatar_summary 事件
-                  const voiceName = getVoiceName(parsed.voice || getSelectedVoice());
+                  // 仅缓存"最后一条"avatar 总结，不立刻播报
                   const currentVoice = parsed.voice || getSelectedVoice();
-                  console.log(`🎤 数字员工总结完成 [${voiceName}]: ${parsed.audioSize} 字节`);
-                  console.log(`📝 数字员工总结文本:`, parsed.summaryText);
-                  console.log(`🎵 当前音色: ${currentVoice}`);
-                  
-                  // 发送 avatar_summary 事件到数字员工组件（只在这里发送一次）
-                  if (parsed.summaryText && parsed.summaryText.trim()) {
-                    console.log(`📤 发送 avatar_summary 事件到数字员工组件`);
-                    window.dispatchEvent(new CustomEvent('agent_avatar_message', {
-                      detail: {
-                        type: 'avatar_summary',
-                        text: parsed.summaryText.trim(),
-                        voice: currentVoice,
-                        duration: parsed.duration || 3000
-                      }
-                    }));
-                  }
-                  
-                  // 播放豆包TTS音频
-                  await ensureAudioUnlocked();
-                  const audioBlob = base64ToBlob(parsed.audioBase64, 'audio/wav');
-                  const audioUrl = URL.createObjectURL(audioBlob);
-                  if (audioRef.current) {
-                    audioRef.current.src = audioUrl;
-                    audioRef.current.onended = () => {
-                      console.log('✅ 数字员工语音播放完成');
-                      URL.revokeObjectURL(audioUrl);
+                  const text = (parsed.summaryText || '').trim();
+
+                  // 可选的"内容级"过滤：丢弃早期的"马上处理"类型（防止误判为最终总结）
+                  if (text && /^马上处理/.test(text)) {
+                    // 仍允许后续的真正总结覆盖缓存
+                    // 不写入 _avatarLastSummary，直接跳过
+                  } else {
+                    _avatarLastSummary = {
+                      text,
+                      voice: currentVoice,
+                      duration: parsed.duration,
+                      audioBase64: parsed.audioBase64
                     };
-                    audioRef.current.play().then(() => {
-                      console.log('🔊 开始播放数字员工语音');
-                    }).catch(e => {
-                      console.error('音频播放失败:', e);
-                      toast.error('音频播放失败');
-                    });
+                  }
+
+                  // 如果已经进入最终阶段（_avatarFinalReady），且还没播过，则立刻播一次
+                  if (_avatarFinalReady && !_avatarSummaryPlayed) {
+                    await _playAvatarSummaryOnce();
                   }
                 } else if (parsed.type === 'avatar_error') {
                   // 数字员工服务错误
@@ -650,22 +862,40 @@ export default function ChatPage() {
         <div className="flex items-center justify-between">
           <div id="chat-header">
             <div className="text-lg font-semibold">AI 对话</div>
-            <div className="text-xs text-gray-500">与 AI 助手自由对话，它会自动调用工具完成任务</div>
+            <div className="text-xs text-gray-500">它会自动调用工具完成任务</div>
           </div>
           <div className="flex items-center gap-2">
             <label className="text-xs text-gray-500 whitespace-nowrap">模型:</label>
             <select 
               value={selectedModel} 
-              onChange={(e) => setSelectedModel(e.target.value as 'openai' | 'gpt4-turbo' | 'gpt5-thinking' | 'gpt5-pro' | 'claude')}
+              onChange={(e) => setSelectedModel(e.target.value as 'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude')}
               className="select text-sm py-1 px-2"
               disabled={loading}
             >
               <option value="openai">Mindflow-Y-Workflow（推荐-自动工作流）</option>
-              <option value="gpt4-turbo">Mindflow-Y-Fast（快速工作流）</option>
               <option value="gpt5-pro">Mindflow-Y-Pro（强推理）</option>
               <option value="gpt5-thinking">Mindflow-Y（强推理）</option>
               <option value="claude">Mindflow-X-Workflow（Beta-Testing）</option>
             </select>
+            {messages.length > 0 && (
+              <button
+                onClick={() => {
+                  if (window.confirm('确认清除所有聊天记录？此操作无法撤销。')) {
+                    setMessages([]);
+                    if (typeof window !== 'undefined') {
+                      localStorage.removeItem('chat_messages');
+                      console.log('🗑️ [聊天记录] 已清除 localStorage');
+                    }
+                    toast.success('聊天记录已清除');
+                  }
+                }}
+                disabled={loading}
+                className="text-xs px-3 py-1.5 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 disabled:opacity-50 transition-colors whitespace-nowrap"
+                title="清除所有聊天记录"
+              >
+                清除
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -744,19 +974,6 @@ export default function ChatPage() {
                   </div>
                 )}
 
-                {/* 模型原生thinking（Ollama等本地模型） */}
-                {msg.role === 'assistant' && msg.modelThinking && (
-                  <div className="mb-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Brain size={14} className="text-gray-500 dark:text-gray-400" />
-                      <span className="font-medium text-gray-600 dark:text-gray-400 text-xs">本地模型分析过程</span>
-                    </div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 whitespace-pre-wrap font-mono leading-relaxed">
-                      {msg.modelThinking}
-                    </div>
-                  </div>
-                )}
-
                 {/* 消息内容 */}
                 <div className={`${
                   msg.role === 'user' 
@@ -785,8 +1002,12 @@ export default function ChatPage() {
                       </>
                     )}
                   </div>
-                  <div className={`whitespace-pre-wrap text-sm leading-relaxed ${msg.role === 'user' ? 'text-blue-900 dark:text-blue-100' : ''}`}>
-                    {msg.content}
+                  <div className={msg.role === 'user' ? 'text-blue-900 dark:text-blue-100' : ''}>
+                    {msg.role === 'assistant' ? (
+                      <Linkify text={msg.content} withCards size="sm" />
+                    ) : (
+                      <div className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -832,6 +1053,9 @@ export default function ChatPage() {
                                 <div className="bg-gray-50 dark:bg-gray-900 rounded p-2">
                                   <JsonView src={tc.result} />
                                 </div>
+                                
+                                {/* 文件预览 */}
+                                <FilePreview result={tc.result} />
                               </>
                             )}
                           </div>
@@ -921,21 +1145,42 @@ export default function ChatPage() {
             className="hidden"
           />
           
-          <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
-          
-          <button
-            onClick={() => setDeepThinking(!deepThinking)}
-            className={`btn-ghost text-sm ${deepThinking ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : ''}`}
-            title="深度思考模式（使用更强大的推理能力）"
-          >
-            <Brain size={16} className={deepThinking ? 'text-purple-600' : ''} />
-            深度思考
-            {deepThinking && (
-              <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200">
-                ON
-              </span>
-            )}
-          </button>
+          {/* 深度思考按钮 - 只在 GPT-5 系列模型时显示 */}
+          {(selectedModel === 'gpt5-thinking' || selectedModel === 'gpt5-pro') && (
+            <>
+              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDeepThinkingEnabled(!deepThinkingEnabled)}
+                  className={`btn-ghost text-sm ${
+                    deepThinkingEnabled ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : ''
+                  }`}
+                  title="深度思考模式（控制 GPT-5 的推理强度）"
+                >
+                  <Brain size={16} className={deepThinkingEnabled ? 'text-purple-600' : ''} />
+                  深度思考
+                  {deepThinkingEnabled && (
+                    <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-purple-200 dark:bg-purple-800 text-purple-800 dark:text-purple-200">
+                      {deepThinkingLevel.toUpperCase()}
+                    </span>
+                  )}
+                </button>
+                {deepThinkingEnabled && (
+                  <select
+                    value={deepThinkingLevel}
+                    onChange={(e) => setDeepThinkingLevel(e.target.value as 'low'|'medium'|'high')}
+                    className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                    title="思考强度"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                )}
+              </div>
+            </>
+          )}
 
           <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
 

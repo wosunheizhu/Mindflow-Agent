@@ -21,6 +21,19 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
 
   // 处理展开状态变化
   const handleExpandChange = (expanded: boolean) => {
+    // 检查是否有 Agentic AI 任务正在执行
+    if (typeof window !== 'undefined') {
+      const isAgentWorking = localStorage.getItem('agent_working') === 'true';
+      if (isAgentWorking) {
+        const confirmed = window.confirm(
+          'Agentic AI 任务正在执行中，切换数字员工窗口状态将可能影响任务执行。是否确认继续？'
+        );
+        if (!confirmed) {
+          return; // 用户取消，不执行展开/收起
+        }
+      }
+    }
+    
     console.log(`📐 [LayoutShell] 展开状态变化: ${expanded}`);
     setIsAvatarExpanded(expanded);
     // 同步到localStorage

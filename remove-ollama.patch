@@ -1,9 +1,0 @@
-由于Ollama相关代码太多（约600行），我会分批处理：
-
-1. 已移除前端的Ollama选项
-2. 已移除getAIService中的ollama分支  
-3. 已移除modelProvider中的ollama处理
-
-现在需要移除后端的Ollama流处理代码（第268-800行）
-
-这部分代码很长，我会保留核心的OpenAI和Claude逻辑。

@@ -394,13 +394,20 @@ async def avatar_chat_bidirectional(request: ChatRequest):
             
             # 双向流式处理（传递历史、Agent工作状态和深度思考模式）
             async for event in streamer.chat_bidirectional_yield(message_with_files, history_messages, request.agent_working, request.deep_thinking):
+                logger.info(f"📬 [voice_server] 收到事件类型: {event['type']}")
+                
                 if event["type"] == "text":
                     # 流式返回文本片段
+                    logger.info(f"📝 [voice_server] 转发 text 事件: {event['content'][:30]}...")
                     yield f"data: {json.dumps({'type': 'text', 'content': event['content']})}\n\n"
                 
                 elif event["type"] == "reasoning":
                     # 流式返回推理内容
-                    yield f"data: {json.dumps({'type': 'reasoning', 'content': event['content']})}\n\n"
+                    logger.info(f"🧠 [voice_server] 转发 reasoning 事件: {event['content'][:50]}...")
+                    reasoning_payload = json.dumps({'type': 'reasoning', 'content': event['content']})
+                    logger.info(f"📤 [voice_server] SSE数据: {reasoning_payload[:100]}...")
+                    yield f"data: {reasoning_payload}\n\n"
+                    logger.info(f"✅ [voice_server] reasoning 事件已发送")
                     
                 elif event["type"] == "audio":
                     # 流式返回音频片段（Base64编码，携带顺序信息）

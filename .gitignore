@@ -58,3 +58,16 @@ __pycache__/
 generated_files/
 reports/
 test-results/
+
+# Test files
+test-*.html
+test-*.js
+test-*.md
+
+# Virtual environments
+venv_voice/
+venv_gpt5/
+
+# Temporary files
+.temp-downloads/
+*.tmp

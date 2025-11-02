@@ -1,0 +1,24 @@
+# Railway Dockerfile - GPT-5 服务后端
+FROM python:3.13-slim
+
+# 设置工作目录
+WORKDIR /app
+
+# 安装系统依赖
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# 复制 requirements 并安装 Python 依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 复制 GPT-5 服务文件
+COPY gpt5_service.py .
+
+# 暴露端口（Railway 会自动映射）
+EXPOSE 8002
+
+# 启动命令
+CMD ["python", "gpt5_service.py"]
+
