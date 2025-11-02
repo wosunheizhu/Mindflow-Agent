@@ -51,16 +51,16 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       {/* 展开状态下的整体布局：左侧数字员工 + 右侧主内容 */}
       {isAvatarExpanded ? (
         <div className="flex h-[calc(100vh-4rem)]">
-          {/* 左侧：数字员工（50%宽度，flex布局确保内容对齐） */}
+          {/* 左侧：数字员工（50%宽度） */}
           <div className="w-1/2 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
-            <div className="px-4 py-4 h-full flex flex-col">
+            <div className="p-4 h-full flex flex-col">
               <AvatarDisplay isExpanded={true} onExpandChange={handleExpandChange} />
             </div>
           </div>
           
-          {/* 右侧：主内容（50%宽度，有独立的滚动区域） */}
+          {/* 右侧：主内容（50%宽度，对齐padding） */}
           <div className="w-1/2 flex flex-col">
-            <div className="px-4 py-4 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
+            <div className="p-4 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
               {children}
             </div>
           </div>

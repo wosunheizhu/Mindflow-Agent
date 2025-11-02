@@ -164,9 +164,14 @@ export default function FilePreview({ result }: FilePreviewProps) {
           {fileInfo.type === 'html' && (
             <iframe
               src={downloadUrl.startsWith('http') ? downloadUrl : `${window.location.origin}${downloadUrl}`}
-              className="w-full h-96 border rounded"
+              className="w-full h-96 border rounded bg-white"
               title={filename}
-              sandbox="allow-scripts"
+              sandbox="allow-scripts allow-same-origin"
+              onLoad={() => console.log('✅ HTML 文件预览加载成功')}
+              onError={() => {
+                console.error('❌ HTML 文件预览加载失败');
+                toast.error('预览加载失败，请点击"在新窗口打开"查看');
+              }}
             />
           )}
           
