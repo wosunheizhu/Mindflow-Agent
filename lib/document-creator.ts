@@ -41,69 +41,93 @@ export async function createMarkdown(filename: string, content: string, frontmat
 }
 
 /**
- * 创建 Word 文档（使用 Aspose Cloud API）
+ * 创建 Word 文档（使用 docx.js，支持 Vercel 环境）
  */
 export async function createWord(filename: string, content: string, options?: any): Promise<string> {
   try {
-    const axios = require('axios');
-    const FormData = require('form-data');
+    const { Document, Packer, Paragraph, TextRun, HeadingLevel } = require('docx');
     
-    // 1. 获取 Aspose Access Token
-    const clientId = process.env.ASPOSE_CLIENT_ID || '43287341-617f-4d95-9caa-b166d46fbb8d';
-    const clientSecret = process.env.ASPOSE_CLIENT_SECRET || '1c0df04fbde71bcfbc75cbe6f3d297bf';
-    
-    const tokenResponse = await axios.post(
-      'https://api.aspose.cloud/connect/token',
-      new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      }
-    );
-    
-    const accessToken = tokenResponse.data.access_token;
-    
-    // 2. 将 Markdown 内容转换为简单的 HTML
-    const htmlContent = content
-      .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/^\- (.*?)$/gm, '<li>$1</li>')
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/^(?!<[h|l|p])/gm, '<p>')
-      .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>'); // 使用 [\s\S] 替代 s 标志
-    
-    // 3. 使用 Aspose Words API 从 HTML 创建 Word 文档
     const docxFilename = filename.endsWith('.docx') ? filename : `${filename}.docx`;
     
-    const response = await axios.post(
-      `https://api.aspose.cloud/v4.0/words/convert?format=docx`,
-      `<html><body>${htmlContent}</body></html>`,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'text/html',
-        },
-        responseType: 'arraybuffer',
-        timeout: 60000,
-      }
-    );
+    // 解析 Markdown 内容为段落
+    const lines = content.split('\n');
+    const children: any[] = [];
     
-    // 4. 保存文件
+    for (const line of lines) {
+      if (!line.trim()) {
+        // 空行
+        children.push(new Paragraph({ text: '' }));
+      } else if (line.startsWith('# ')) {
+        // H1 标题
+        children.push(new Paragraph({
+          text: line.substring(2),
+          heading: HeadingLevel.HEADING_1,
+        }));
+      } else if (line.startsWith('## ')) {
+        // H2 标题
+        children.push(new Paragraph({
+          text: line.substring(3),
+          heading: HeadingLevel.HEADING_2,
+        }));
+      } else if (line.startsWith('### ')) {
+        // H3 标题
+        children.push(new Paragraph({
+          text: line.substring(4),
+          heading: HeadingLevel.HEADING_3,
+        }));
+      } else if (line.startsWith('- ')) {
+        // 列表项
+        children.push(new Paragraph({
+          text: line.substring(2),
+          bullet: { level: 0 },
+        }));
+      } else {
+        // 普通段落（处理粗体和斜体）
+        const textRuns: any[] = [];
+        let currentText = line;
+        
+        // 简单处理粗体 **text**
+        const boldRegex = /\*\*(.*?)\*\*/g;
+        let lastIndex = 0;
+        let match;
+        
+        while ((match = boldRegex.exec(currentText)) !== null) {
+          if (match.index > lastIndex) {
+            textRuns.push(new TextRun(currentText.substring(lastIndex, match.index)));
+          }
+          textRuns.push(new TextRun({ text: match[1], bold: true }));
+          lastIndex = match.index + match[0].length;
+        }
+        
+        if (lastIndex < currentText.length) {
+          textRuns.push(new TextRun(currentText.substring(lastIndex)));
+        }
+        
+        children.push(new Paragraph({ children: textRuns.length > 0 ? textRuns : [new TextRun(line)] }));
+      }
+    }
+    
+    // 创建文档
+    const doc = new Document({
+      sections: [{
+        properties: {},
+        children,
+      }],
+    });
+    
+    // 生成 Buffer
+    const buffer = await Packer.toBuffer(doc);
+    
+    // 保存文件
     const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
     if (!existsSync(outputDir) && !process.env.VERCEL) {
       await mkdir(outputDir, { recursive: true });
     }
     
     const filepath = path.join(outputDir, docxFilename);
-    await writeFile(filepath, Buffer.from(response.data));
+    await writeFile(filepath, buffer);
     
-    console.log(`✅ Word 文档创建成功: ${docxFilename}`);
+    console.log(`✅ Word 文档创建成功: ${docxFilename}, 大小: ${(buffer.length / 1024).toFixed(2)} KB`);
     return filepath;
   } catch (error: any) {
     console.error('❌ Word 文档创建失败:', error.message);
@@ -167,43 +191,65 @@ export async function createExcel(filename: string, data: any[][], sheetName: st
 }
 
 /**
- * 创建 PDF 文档（使用 Aspose Cloud API）
+ * 创建 PDF 文档（使用 Puppeteer，支持 Vercel 环境）
  */
 export async function createPDF(filename: string, content: string): Promise<string> {
   try {
-    const axios = require('axios');
+    const puppeteer = require('puppeteer');
+    const chromium = require('@sparticuz/chromium-min');
     
-    // 1. 获取 Aspose Access Token
-    const clientId = process.env.ASPOSE_CLIENT_ID || '43287341-617f-4d95-9caa-b166d46fbb8d';
-    const clientSecret = process.env.ASPOSE_CLIENT_SECRET || '1c0df04fbde71bcfbc75cbe6f3d297bf';
+    const pdfFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
     
-    const tokenResponse = await axios.post(
-      'https://api.aspose.cloud/connect/token',
-      new URLSearchParams({
-        grant_type: 'client_credentials',
-        client_id: clientId,
-        client_secret: clientSecret,
-      }),
-      {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      }
-    );
-    
-    const accessToken = tokenResponse.data.access_token;
-    
-    // 2. 将 Markdown 内容转换为 HTML
+    // 1. 将 Markdown 转换为带样式的 HTML
     const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <style>
-    body { font-family: Arial, sans-serif; margin: 40px; line-height: 1.6; }
-    h1 { color: #1e3a8a; border-bottom: 2px solid #3b82f6; padding-bottom: 10px; }
-    h2 { color: #2563eb; margin-top: 30px; }
-    h3 { color: #3b82f6; }
-    p { margin: 10px 0; }
-    ul { margin: 10px 0; padding-left: 20px; }
-    strong { color: #1e40af; }
+    body { 
+      font-family: 'PingFang SC', 'Microsoft YaHei', Arial, sans-serif; 
+      margin: 40px; 
+      line-height: 1.8; 
+      color: #333;
+    }
+    h1 { 
+      color: #1e3a8a; 
+      border-bottom: 3px solid #3b82f6; 
+      padding-bottom: 12px; 
+      margin-top: 40px;
+      font-size: 28px;
+    }
+    h2 { 
+      color: #2563eb; 
+      margin-top: 32px; 
+      margin-bottom: 16px;
+      font-size: 22px;
+    }
+    h3 { 
+      color: #3b82f6; 
+      margin-top: 24px;
+      margin-bottom: 12px;
+      font-size: 18px;
+    }
+    p { 
+      margin: 12px 0; 
+      text-align: justify;
+    }
+    ul { 
+      margin: 12px 0; 
+      padding-left: 24px; 
+    }
+    li {
+      margin: 6px 0;
+    }
+    strong { 
+      color: #1e40af; 
+      font-weight: 600;
+    }
+    em {
+      font-style: italic;
+      color: #4b5563;
+    }
   </style>
 </head>
 <body>
@@ -214,39 +260,59 @@ ${content
   .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
   .replace(/\*(.*?)\*/g, '<em>$1</em>')
   .replace(/^\- (.*?)$/gm, '<li>$1</li>')
+  .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')
   .replace(/\n\n/g, '</p><p>')
-  .replace(/^(?!<)/gm, '<p>')
-  .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')}
+  .replace(/^(?!<[h|l|u])/gm, '<p>')
+  .replace(/<p><\/p>/g, '')}
 </body>
 </html>`;
     
-    // 3. 使用 Aspose HTML to PDF API
-    const pdfFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
-    
-    const response = await axios.post(
-      'https://api.aspose.cloud/v4.0/html/convert/pdf',
-      htmlContent,
-      {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'text/html',
+    // 2. 启动 Puppeteer
+    let browser;
+    try {
+      browser = await puppeteer.launch({
+        args: process.env.VERCEL 
+          ? [...chromium.args, '--hide-scrollbars', '--disable-web-security']
+          : ['--no-sandbox', '--disable-setuid-sandbox'],
+        defaultViewport: chromium.defaultViewport,
+        executablePath: process.env.VERCEL 
+          ? await chromium.executablePath('/tmp/chromium')
+          : undefined,
+        headless: true,
+      });
+      
+      const page = await browser.newPage();
+      await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+      
+      // 3. 生成 PDF
+      const pdfBuffer = await page.pdf({
+        format: 'A4',
+        margin: {
+          top: '20mm',
+          right: '20mm',
+          bottom: '20mm',
+          left: '20mm',
         },
-        responseType: 'arraybuffer',
-        timeout: 60000,
+        printBackground: true,
+      });
+      
+      await browser.close();
+      
+      // 4. 保存文件
+      const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
+      if (!existsSync(outputDir) && !process.env.VERCEL) {
+        await mkdir(outputDir, { recursive: true });
       }
-    );
-    
-    // 4. 保存文件
-    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
-    if (!existsSync(outputDir) && !process.env.VERCEL) {
-      await mkdir(outputDir, { recursive: true });
+      
+      const filepath = path.join(outputDir, pdfFilename);
+      await writeFile(filepath, pdfBuffer);
+      
+      console.log(`✅ PDF 文档创建成功: ${pdfFilename}, 大小: ${(pdfBuffer.length / 1024).toFixed(2)} KB`);
+      return filepath;
+    } catch (error) {
+      if (browser) await browser.close();
+      throw error;
     }
-    
-    const filepath = path.join(outputDir, pdfFilename);
-    await writeFile(filepath, Buffer.from(response.data));
-    
-    console.log(`✅ PDF 文档创建成功: ${pdfFilename}`);
-    return filepath;
   } catch (error: any) {
     console.error('❌ PDF 文档创建失败:', error.message);
     throw new Error(`PDF 文档创建失败: ${error.message}`);
