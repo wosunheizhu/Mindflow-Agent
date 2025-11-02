@@ -422,23 +422,80 @@ export async function POST(req: NextRequest): Promise<Response> {
                   );
                 }
                 
-                // 提取主要内容
-                const responseText = gpt5Response.output_text || gpt5Response.text || '';
-                
-                // 模拟流式输出文本内容
-                if (responseText) {
-                  const chunkSize = 50;
-                  for (let i = 0; i < responseText.length; i += chunkSize) {
-                    const chunk = responseText.slice(i, i + chunkSize);
+                // 检查是否有工具调用
+                if (gpt5Response.tool_calls && gpt5Response.tool_calls.length > 0) {
+                  console.log(`🔧 GPT-5 Pro 请求调用 ${gpt5Response.tool_calls.length} 个工具`);
+                  
+                  // 发送工具调用通知到前端
+                  for (const toolCall of gpt5Response.tool_calls) {
                     controller.enqueue(
-                      encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
+                      encoder.encode(`data: ${JSON.stringify({
+                        type: "tool_call",
+                        tool: toolCall.name,
+                        args: JSON.parse(toolCall.arguments || '{}')
+                      })}\n\n`)
                     );
-                    await new Promise(resolve => setTimeout(resolve, 20));
                   }
-                }
+                  
+                  // 执行工具调用
+                  for (const toolCall of gpt5Response.tool_calls) {
+                    const toolName = toolCall.name;
+                    const toolArgs = JSON.parse(toolCall.arguments || '{}');
+                    
+                    console.log(`🔧 执行工具: ${toolName}`, toolArgs);
+                    
+                    try {
+                      const toolResult = await executeToolCall(toolName, toolArgs);
+                      
+                      // 发送工具结果到前端
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({
+                          type: "tool_result",
+                          tool: toolName,
+                          result: toolResult
+                        })}\n\n`)
+                      );
+                      
+                      // 添加工具结果到消息历史
+                      conversationMessages.push({
+                        role: "tool" as any,
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify(toolResult)
+                      });
+                      
+                      console.log(`✅ 工具 ${toolName} 执行完成`);
+                    } catch (error: any) {
+                      console.error(`❌ 工具 ${toolName} 执行失败:`, error.message);
+                      conversationMessages.push({
+                        role: "tool" as any,
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify({ error: error.message })
+                      });
+                    }
+                  }
+                  
+                  // 继续循环，让 GPT-5 根据工具结果生成下一步响应
+                  shouldContinue = true;
+                  console.log(`🔄 工具执行完成，继续下一轮...`);
+                } else {
+                  // 没有工具调用，提取主要内容并结束
+                  const responseText = gpt5Response.output_text || gpt5Response.text || '';
+                  
+                  // 模拟流式输出文本内容
+                  if (responseText) {
+                    const chunkSize = 50;
+                    for (let i = 0; i < responseText.length; i += chunkSize) {
+                      const chunk = responseText.slice(i, i + chunkSize);
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
+                      );
+                      await new Promise(resolve => setTimeout(resolve, 20));
+                    }
+                  }
 
-                shouldContinue = false;
-                console.log('✅ GPT-5 Pro 对话完成');
+                  shouldContinue = false;
+                  console.log('✅ GPT-5 Pro 对话完成');
+                }
 
               } catch (error: any) {
                 console.error('❌ GPT-5 Responses API 调用错误:', error);
@@ -553,23 +610,80 @@ export async function POST(req: NextRequest): Promise<Response> {
                   );
                 }
                 
-                // 提取主要内容
-                const responseText = gpt5Response.output_text || gpt5Response.text || '';
-                
-                // 模拟流式输出文本内容
-                if (responseText) {
-                  const chunkSize = 50;
-                  for (let i = 0; i < responseText.length; i += chunkSize) {
-                    const chunk = responseText.slice(i, i + chunkSize);
+                // 检查是否有工具调用（与 Pro 版本相同的逻辑）
+                if (gpt5Response.tool_calls && gpt5Response.tool_calls.length > 0) {
+                  console.log(`🔧 GPT-5 Thinking 请求调用 ${gpt5Response.tool_calls.length} 个工具`);
+                  
+                  // 发送工具调用通知到前端
+                  for (const toolCall of gpt5Response.tool_calls) {
                     controller.enqueue(
-                      encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
+                      encoder.encode(`data: ${JSON.stringify({
+                        type: "tool_call",
+                        tool: toolCall.name,
+                        args: JSON.parse(toolCall.arguments || '{}')
+                      })}\n\n`)
                     );
-                    await new Promise(resolve => setTimeout(resolve, 20));
                   }
-                }
+                  
+                  // 执行工具调用
+                  for (const toolCall of gpt5Response.tool_calls) {
+                    const toolName = toolCall.name;
+                    const toolArgs = JSON.parse(toolCall.arguments || '{}');
+                    
+                    console.log(`🔧 执行工具: ${toolName}`, toolArgs);
+                    
+                    try {
+                      const toolResult = await executeToolCall(toolName, toolArgs);
+                      
+                      // 发送工具结果到前端
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({
+                          type: "tool_result",
+                          tool: toolName,
+                          result: toolResult
+                        })}\n\n`)
+                      );
+                      
+                      // 添加工具结果到消息历史
+                      conversationMessages.push({
+                        role: "tool" as any,
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify(toolResult)
+                      });
+                      
+                      console.log(`✅ 工具 ${toolName} 执行完成`);
+                    } catch (error: any) {
+                      console.error(`❌ 工具 ${toolName} 执行失败:`, error.message);
+                      conversationMessages.push({
+                        role: "tool" as any,
+                        tool_call_id: toolCall.id,
+                        content: JSON.stringify({ error: error.message })
+                      });
+                    }
+                  }
+                  
+                  // 继续循环
+                  shouldContinue = true;
+                  console.log(`🔄 工具执行完成，继续下一轮...`);
+                } else {
+                  // 没有工具调用，提取主要内容并结束
+                  const responseText = gpt5Response.output_text || gpt5Response.text || '';
+                  
+                  // 模拟流式输出文本内容
+                  if (responseText) {
+                    const chunkSize = 50;
+                    for (let i = 0; i < responseText.length; i += chunkSize) {
+                      const chunk = responseText.slice(i, i + chunkSize);
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
+                      );
+                      await new Promise(resolve => setTimeout(resolve, 20));
+                    }
+                  }
 
-                shouldContinue = false;
-                console.log('✅ GPT-5 Thinking 对话完成');
+                  shouldContinue = false;
+                  console.log('✅ GPT-5 Thinking 对话完成');
+                }
 
               } catch (error: any) {
                 console.error('❌ GPT-5 Responses API 调用错误:', error);
