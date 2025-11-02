@@ -1844,8 +1844,8 @@ async function createPresentation(
       console.warn(`⚠️ 警告：文件大小异常小 (${fileSize} bytes)，可能不完整`);
     }
     
-    // 8. 保存文件
-    const outputDir = path.join(process.cwd(), 'outputs');
+    // 8. 保存文件（Vercel 环境使用 /tmp 目录）
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
@@ -2059,12 +2059,12 @@ async function convertDocument(
       }
     );
     
-    // 5. 保存转换后的文件
+    // 5. 保存转换后的文件（Vercel 环境使用 /tmp 目录）
     const outputName = outputFilename 
       ? `${outputFilename}.${outputFormat}` 
       : inputFile.replace(inputExt, `.${outputFormat}`);
     
-    const outputDir = path.join(process.cwd(), 'outputs');
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
@@ -2289,9 +2289,9 @@ async function generateQRCode(text: string, filename: string, size: number = 300
       }
     );
     
-    // 3. 保存二维码图片
+    // 3. 保存二维码图片（Vercel 环境使用 /tmp 目录）
     const outputName = `${filename}.png`;
-    const outputDir = path.join(process.cwd(), 'outputs');
+    const outputDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'outputs');
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
