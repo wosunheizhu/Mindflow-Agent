@@ -6,7 +6,7 @@
 import { parseFile, searchInText } from "./file-processor";
 import { visitWebsite, automateWebsite, extractWebData } from "./browser-automation";
 import { analyzeImage, compareImages } from "./image-analyzer";
-import { createMarkdown, createWord, createTextFile, createExcel, createJSON } from "./document-creator";
+import { createMarkdown, createWord, createTextFile, createExcel, createJSON, createPDF } from "./document-creator";
 import { registerDownload } from "./download-registry";
 import { uploadFile } from "./blob-storage";
 
@@ -387,13 +387,13 @@ export const tools = [
     type: "function",
     function: {
       name: "create_document",
-      description: "创建文档文件（Markdown、Word、Excel、TXT、JSON）。用于保存分析结果、生成报告等。",
+      description: "创建文档文件（Markdown、Word、PDF、Excel、TXT、JSON）。用于保存分析结果、生成报告等。支持云环境。",
       parameters: {
         type: "object",
         properties: {
           filename: {
             type: "string",
-            description: "文件名（含扩展名，如 report.md, document.docx, data.xlsx）",
+            description: "文件名（含扩展名，如 report.md, document.docx, report.pdf, data.xlsx）",
           },
           content: {
             type: "string",
@@ -401,8 +401,8 @@ export const tools = [
           },
           format: {
             type: "string",
-            enum: ["markdown", "word", "text", "excel", "json"],
-            description: "文档格式",
+            enum: ["markdown", "word", "pdf", "text", "excel", "json"],
+            description: "文档格式：markdown(.md), word(.docx), pdf(.pdf), text(.txt), excel(.xlsx), json(.json)",
           },
           options: {
             type: "object",
@@ -1299,12 +1299,20 @@ async function createDocumentTool(filename: string, content: string, format: str
         break;
       }
       case 'word': {
-        // Vercel环境不支持Word创建（officegen已移除）
-        if (process.env.VERCEL) {
-          throw new Error('Word文档创建功能暂不支持生产环境，请使用Markdown格式');
-        }
-        // 本地环境提示Word功能已禁用
-        throw new Error('Word文档创建功能已禁用，请使用Markdown格式替代');
+        // 使用 Aspose Cloud API 创建 Word 文档（支持云环境）
+        if (!outFilename.endsWith('.docx')) outFilename += '.docx';
+        mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const wordPath = await createWord(outFilename, content, options);
+        buffer = fs.readFileSync(wordPath);
+        break;
+      }
+      case 'pdf': {
+        // 使用 Aspose Cloud API 创建 PDF 文档（支持云环境）
+        if (!outFilename.endsWith('.pdf')) outFilename += '.pdf';
+        mime = 'application/pdf';
+        const pdfPath = await createPDF(outFilename, content);
+        buffer = fs.readFileSync(pdfPath);
+        break;
       }
       case 'excel': {
         if (!outFilename.endsWith('.xlsx')) outFilename += '.xlsx';
