@@ -601,29 +601,40 @@ export default function ChatPage() {
       // 使用 ref 获取最新的 selectedModel（保持代码一致性）
       const currentModel = selectedModelRef.current;
       console.log(`🚀 [主聊天] 使用模型: ${currentModel}`);
+      console.log(`🧠 [主聊天] 深度思考: ${deepThinkingEnabled}, 等级: ${deepThinkingLevel}`);
+      
+      const requestBody = { 
+        messages: newMessages,
+        // 兼容旧字段
+        deepThinking: deepThinkingEnabled,
+        // 新字段：显式控制 GPT-5 Responses 的 reasoning.effort
+        reasoning: deepThinkingEnabled ? { effort: deepThinkingLevel } : { effort: 'low' },
+        deepThinkingEnabled,
+        deepThinkingLevel,
+        browserSearch: browserSearch,
+        avatarEnabled: avatarEnabled,
+        avatarVoice: getSelectedVoice(), // 从localStorage读取
+        modelProvider: currentModel, // 使用 ref 中的最新值
+        hasFiles: uploadedFiles.length > 0
+      };
+      
+      console.log(`📤 [主聊天] 发送请求:`, requestBody);
       
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          messages: newMessages,
-          // 兼容旧字段
-          deepThinking: deepThinkingEnabled,
-          // 新字段：显式控制 GPT-5 Responses 的 reasoning.effort
-          reasoning: deepThinkingEnabled ? { effort: deepThinkingLevel } : { effort: 'low' },
-          deepThinkingEnabled,
-          deepThinkingLevel,
-          browserSearch: browserSearch,
-          avatarEnabled: avatarEnabled,
-          avatarVoice: getSelectedVoice(), // 从localStorage读取
-          modelProvider: currentModel, // 使用 ref 中的最新值
-          hasFiles: uploadedFiles.length > 0
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      console.log(`📥 [主聊天] 响应状态: ${response.status} ${response.statusText}`);
+
       if (!response.ok) {
-        throw new Error('请求失败');
+        const errorText = await response.text();
+        console.error(`❌ [主聊天] 请求失败: ${response.status}, 响应: ${errorText}`);
+        throw new Error(`请求失败: ${response.status}`);
       }
+
+      console.log(`📖 [主聊天] 开始读取响应流...`);
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -633,6 +644,7 @@ export default function ChatPage() {
       let modelThinkingContent = '';
       let reasoningContent = '';  // Agentic AI推理内容
       let sseBuffer = '';
+      let chunkCount = 0;
 
       // === 新增：avatar 总结只触发一次（只在最终阶段触发） ===
       // 会话内暂存最后一条 avatar_audio 的内容与元信息

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPT-5 前端测试</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-6">GPT-5 前端调用测试</h1>
+        
+        <div class="bg-white rounded-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">测试配置</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">模型</label>
+                    <select id="model" class="w-full px-3 py-2 border rounded">
+                        <option value="gpt5-pro">Mindflow-Y-Pro</option>
+                        <option value="gpt5-thinking">Mindflow-Y</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">消息</label>
+                    <input id="message" type="text" value="测试" class="w-full px-3 py-2 border rounded">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-2">深度思考等级</label>
+                    <select id="level" class="w-full px-3 py-2 border rounded">
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                    </select>
+                </div>
+                
+                <button onclick="testGPT5()" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    🚀 测试 GPT-5 调用
+                </button>
+            </div>
+        </div>
+        
+        <div class="bg-white rounded-lg p-6 mb-6">
+            <h2 class="text-lg font-semibold mb-4">控制台日志</h2>
+            <div id="console" class="bg-gray-900 text-green-400 p-4 rounded font-mono text-sm h-96 overflow-y-auto"></div>
+        </div>
+        
+        <div class="bg-white rounded-lg p-6">
+            <h2 class="text-lg font-semibold mb-4">响应内容</h2>
+            <div id="response" class="bg-gray-50 p-4 rounded whitespace-pre-wrap min-h-32"></div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const console = document.getElementById('console');
+            const time = new Date().toLocaleTimeString();
+            const color = type === 'error' ? 'text-red-400' : type === 'success' ? 'text-green-400' : 'text-blue-400';
+            console.innerHTML += `<div class="${color}">[${time}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        async function testGPT5() {
+            const consoleEl = document.getElementById('console');
+            const responseEl = document.getElementById('response');
+            consoleEl.innerHTML = '';
+            responseEl.innerHTML = '';
+            
+            const model = document.getElementById('model').value;
+            const message = document.getElementById('message').value;
+            const level = document.getElementById('level').value;
+            
+            log(`🚀 开始测试 GPT-5 调用...`);
+            log(`📋 模型: ${model}`);
+            log(`📋 深度思考: ${level}`);
+            log(`📋 消息: ${message}`);
+            
+            const requestBody = {
+                messages: [{ role: 'user', content: message }],
+                modelProvider: model,
+                deepThinkingEnabled: true,
+                deepThinkingLevel: level,
+                reasoning: { effort: level },
+                avatarEnabled: false,
+                browserSearch: false,
+                hasFiles: false
+            };
+            
+            log(`📤 发送请求到 /api/chat`);
+            log(`📦 请求体: ${JSON.stringify(requestBody, null, 2)}`);
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                log(`📥 响应状态: ${response.status} ${response.statusText}`, response.ok ? 'success' : 'error');
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    log(`❌ 错误响应: ${errorText}`, 'error');
+                    responseEl.innerHTML = `错误 ${response.status}: ${errorText}`;
+                    return;
+                }
+                
+                log(`📖 开始读取响应流...`);
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let fullResponse = '';
+                let chunkCount = 0;
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) {
+                        log(`✅ 流结束，共收到 ${chunkCount} 个数据块`, 'success');
+                        break;
+                    }
+                    
+                    chunkCount++;
+                    const chunk = decoder.decode(value, { stream: true });
+                    buffer += chunk;
+                    
+                    if (chunkCount <= 5) {
+                        log(`📦 数据块 #${chunkCount}: ${chunk.substring(0, 80)}...`);
+                    }
+                    
+                    // 处理SSE事件
+                    const events = buffer.split('\n\n');
+                    buffer = events.pop() || '';
+                    
+                    for (const evt of events) {
+                        const dataLine = evt.split('\n').find(l => l.startsWith('data: '));
+                        if (!dataLine) continue;
+                        
+                        const data = dataLine.substring(6);
+                        if (data === '[DONE]') {
+                            log(`🏁 收到 [DONE] 标记`, 'success');
+                            continue;
+                        }
+                        
+                        try {
+                            const parsed = JSON.parse(data);
+                            log(`📨 收到事件: ${parsed.type}`);
+                            
+                            if (parsed.type === 'content' && parsed.content) {
+                                fullResponse += parsed.content;
+                                responseEl.innerHTML = fullResponse;
+                            } else if (parsed.type === 'reasoning_complete' && parsed.content) {
+                                log(`🧠 推理完成: ${parsed.content.substring(0, 100)}...`, 'success');
+                            } else if (parsed.type === 'error') {
+                                log(`❌ 错误: ${parsed.error}`, 'error');
+                                responseEl.innerHTML = `错误: ${parsed.error}`;
+                            }
+                        } catch (e) {
+                            log(`⚠️ JSON 解析失败: ${data.substring(0, 50)}`, 'error');
+                        }
+                    }
+                }
+                
+                if (fullResponse) {
+                    log(`✅ 测试完成！收到完整响应`, 'success');
+                } else {
+                    log(`⚠️ 未收到内容响应`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ 测试失败: ${error.message}`, 'error');
+                responseEl.innerHTML = `错误: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
+
