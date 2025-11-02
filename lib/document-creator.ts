@@ -76,7 +76,7 @@ export async function createWord(filename: string, content: string, options?: an
       .replace(/^\- (.*?)$/gm, '<li>$1</li>')
       .replace(/\n\n/g, '</p><p>')
       .replace(/^(?!<[h|l|p])/gm, '<p>')
-      .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+      .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>'); // 使用 [\s\S] 替代 s 标志
     
     // 3. 使用 Aspose Words API 从 HTML 创建 Word 文档
     const docxFilename = filename.endsWith('.docx') ? filename : `${filename}.docx`;
@@ -216,7 +216,7 @@ ${content
   .replace(/^\- (.*?)$/gm, '<li>$1</li>')
   .replace(/\n\n/g, '</p><p>')
   .replace(/^(?!<)/gm, '<p>')
-  .replace(/(<li>.*?<\/li>)/gs, '<ul>$1</ul>')}
+  .replace(/(<li>[\s\S]*?<\/li>)/g, '<ul>$1</ul>')}
 </body>
 </html>`;
     
