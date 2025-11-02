@@ -355,22 +355,32 @@ export async function POST(req: NextRequest): Promise<Response> {
                 // 调用非流式端点（组织需要验证才能使用流式）
                 const gpt5ServiceUrl = process.env.GPT5_SERVICE_URL || 'http://localhost:8002';
                 console.log(`[GPT5-Pro] 调用服务: ${gpt5ServiceUrl}/api/responses (model=${aiService.model})`);
+                console.log(`[GPT5-Pro] 请求参数:`, JSON.stringify(gpt5Params, null, 2));
                 
                 const serviceResponse = await fetch(`${gpt5ServiceUrl}/api/responses`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify(gpt5Params)
+                  body: JSON.stringify(gpt5Params),
+                  signal: AbortSignal.timeout(120000) // 2分钟超时
                 });
 
                 if (!serviceResponse.ok) {
                   const errorText = await serviceResponse.text();
                   console.error(`[GPT5-Pro] 服务错误 ${serviceResponse.status}: ${errorText}`);
-                  throw new Error(`GPT-5 Service error: ${serviceResponse.status} - ${errorText}`);
+                  
+                  // 发送错误到前端
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                    type: 'error',
+                    error: `GPT-5 服务错误 (${serviceResponse.status}): ${errorText.substring(0, 200)}`
+                  })}\n\n`));
+                  
+                  throw new Error(`GPT-5 Service error: ${serviceResponse.status}`);
                 }
 
                 const gpt5Response = await serviceResponse.json();
+                console.log(`[GPT5-Pro] 服务响应:`, gpt5Response);
                 
                 // 保存 response_id 用于下一轮
                 if (gpt5Response.response_id) {
@@ -476,22 +486,32 @@ export async function POST(req: NextRequest): Promise<Response> {
                 // 调用非流式端点（组织需要验证才能使用流式）
                 const gpt5ServiceUrl = process.env.GPT5_SERVICE_URL || 'http://localhost:8002';
                 console.log(`[GPT5-Thinking] 调用服务: ${gpt5ServiceUrl}/api/responses (model=${aiService.model})`);
+                console.log(`[GPT5-Thinking] 请求参数:`, JSON.stringify(gpt5Params, null, 2));
                 
                 const serviceResponse = await fetch(`${gpt5ServiceUrl}/api/responses`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                   },
-                  body: JSON.stringify(gpt5Params)
+                  body: JSON.stringify(gpt5Params),
+                  signal: AbortSignal.timeout(120000) // 2分钟超时
                 });
 
                 if (!serviceResponse.ok) {
                   const errorText = await serviceResponse.text();
                   console.error(`[GPT5-Thinking] 服务错误 ${serviceResponse.status}: ${errorText}`);
-                  throw new Error(`GPT-5 Service error: ${serviceResponse.status} - ${errorText}`);
+                  
+                  // 发送错误到前端
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                    type: 'error',
+                    error: `GPT-5 服务错误 (${serviceResponse.status}): ${errorText.substring(0, 200)}`
+                  })}\n\n`));
+                  
+                  throw new Error(`GPT-5 Service error: ${serviceResponse.status}`);
                 }
 
                 const gpt5Response = await serviceResponse.json();
+                console.log(`[GPT5-Thinking] 服务响应:`, gpt5Response);
                 
                 // 保存 response_id 用于下一轮
                 if (gpt5Response.response_id) {
