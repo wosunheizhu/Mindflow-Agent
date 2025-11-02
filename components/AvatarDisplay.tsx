@@ -744,7 +744,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     <div className={isExpanded ? 'h-full flex flex-col' : 'card mt-4 p-3'}>
       {/* 头部标题栏 */}
       {isExpanded ? (
-        <div className="card p-3 mb-4 flex-shrink-0">
+        <div className="card p-4 mb-4 flex-shrink-0">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
               <div className="text-lg font-semibold">数字员工对话</div>
