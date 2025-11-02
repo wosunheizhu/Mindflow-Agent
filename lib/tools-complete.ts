@@ -1536,18 +1536,34 @@ async function createChartTool(chartType: string, labels: string[], values: numb
       ],
     };
     const html = `<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${titleText}</title>\n<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>\n</head>\n<body style="padding:20px;background:#f5f5f5">\n<div style="max-width:900px;margin:0 auto;background:#fff;padding:30px;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1)">\n<h1 style="color:#1e3a8a;margin-bottom:20px">${titleText}</h1>\n<canvas id="c"></canvas>\n</div>\n<script>\nconst ctx = document.getElementById('c');\nnew Chart(ctx, ${JSON.stringify({ type: chartType, data, options: { responsive: true } })});\n</script>\n</body>\n</html>`;
-    const buffer = Buffer.from(html, 'utf-8');
-    const filename = `${chartType}_chart_${Date.now()}.html`;
-    // 使用新的云存储上传
-    const download_url = await uploadAndGetUrl(buffer, filename, 'text/html; charset=utf-8');
+    const htmlBuffer = Buffer.from(html, 'utf-8');
+    const htmlFilename = `${chartType}_chart_${Date.now()}.html`;
+    const htmlUrl = await uploadAndGetUrl(htmlBuffer, htmlFilename, 'text/html; charset=utf-8');
+
+    // 同时生成 CSV 数据文件（重要：提供原始数据）
+    let csvContent = 'Label,Value\n';
+    labels.forEach((label, i) => {
+      csvContent += `"${label}",${values[i]}\n`;
+    });
+    const csvBuffer = Buffer.from(csvContent, 'utf-8');
+    const csvFilename = `${chartType}_chart_data_${Date.now()}.csv`;
+    const csvUrl = await uploadAndGetUrl(csvBuffer, csvFilename, 'text/csv; charset=utf-8');
 
     return {
       success: true,
       chartType,
-      filename,
-      size: buffer.length,
-      download_url,
-      note: `✅ 图表已生成，点击下载: ${download_url}`,
+      title: titleText,
+      dataPoints: labels.length,
+      
+      // HTML 图表文件
+      filename: htmlFilename,
+      download_url: htmlUrl,
+      
+      // CSV 数据文件
+      csv_filename: csvFilename,
+      csv_url: csvUrl,
+      
+      note: `✅ 图表已生成\n\n📊 交互式图表：${htmlUrl}\n📄 原始数据 CSV：${csvUrl}\n\n请同时下载两个文件以获取完整数据。`,
     };
   } catch (error: any) {
     return {
