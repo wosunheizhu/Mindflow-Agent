@@ -132,6 +132,11 @@ export async function POST(req: NextRequest): Promise<Response> {
 - **凡是涉及时事、新闻、最新发展等时效性内容，必须先使用 search_web 工具搜索最新信息**
 - **使用搜索工具获取信息后，必须在回答中附上参考资料的原始链接，方便用户查看来源**
 
+### 文档生成规则（重要）
+- **直接生成目标格式**：如果用户需要 HTML/PDF 文档，使用 create_document 时直接指定该格式
+- **禁止格式转换链**：不要先生成 Markdown 再用 convert_document 转换（在云环境中会失败）
+- **一步到位**：create_document 支持多种格式（markdown/word/text），直接生成用户需要的格式
+
 ### 推理与约束
 - 使用结构化推理，但不暴露长篇思维过程；只输出结论与证据摘要
 - 明确边界条件、适用范围、反例与失败模式
