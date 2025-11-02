@@ -785,8 +785,8 @@ async def create_response_stream(request: GPT5Request):
 if __name__ == "__main__":
     import uvicorn
     
-    # 端口 8002（8001 已被 voice_server.py 使用）
-    port = int(os.getenv("GPT5_SERVICE_PORT", 8002))
+    # Railway 使用 PORT 环境变量，本地开发使用 8002
+    port = int(os.getenv("PORT", 8002))
     
     print(f"""
     🚀 GPT-5 Responses API Service 启动中...
