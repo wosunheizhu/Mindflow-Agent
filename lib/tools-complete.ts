@@ -19,17 +19,27 @@ function parseMarkdownTable(markdown: string): string[][] {
   const data: string[][] = [];
   
   for (const line of lines) {
-    // 跳过分隔线（例如 |---|---|）
-    if (line.trim().match(/^\|[\s\-:]+\|$/)) {
+    const trimmedLine = line.trim();
+    
+    // 跳过空行
+    if (!trimmedLine) continue;
+    
+    // 跳过分隔线（例如 |---|---|，只包含 - : | 和空格）
+    if (trimmedLine.match(/^\|[\s\-:|]+\|$/)) {
       continue;
     }
     
     // 解析表格行
-    if (line.trim().startsWith('|')) {
-      const cells = line
+    if (trimmedLine.startsWith('|')) {
+      const cells = trimmedLine
         .split('|')
-        .map(cell => cell.trim())
-        .filter(cell => cell.length > 0); // 移除首尾空元素
+        .slice(1, -1) // 移除首尾的空字符串（因为 |开始 和 |结束）
+        .map(cell => cell.trim());
+      
+      // 跳过全是分隔符的行（双重检查）
+      if (cells.every(cell => /^[\s\-:]+$/.test(cell))) {
+        continue;
+      }
       
       if (cells.length > 0) {
         data.push(cells);
@@ -37,6 +47,7 @@ function parseMarkdownTable(markdown: string): string[][] {
     }
   }
   
+  console.log(`📊 Markdown 表格解析结果：${data.length} 行 x ${data[0]?.length || 0} 列`);
   return data;
 }
 
