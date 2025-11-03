@@ -1295,16 +1295,39 @@ async function analyzeImageTool(filename: string, question?: string) {
     const fs = require('fs');
     const path = require('path');
     
-    // 从文件系统查找图片
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    // 从文件系统查找图片（Vercel 环境使用 /tmp）
+    const uploadsDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
+    
+    console.log(`🖼️ [analyze_image] 查找图片目录: ${uploadsDir}`);
+    console.log(`🔍 [analyze_image] 查找文件名: ${filename}`);
+    
+    if (!fs.existsSync(uploadsDir)) {
+      console.error(`❌ [analyze_image] 目录不存在: ${uploadsDir}`);
+      return {
+        error: "上传目录不存在",
+        message: "请先上传图片文件",
+        uploadsDir: uploadsDir
+      };
+    }
+    
     const files = fs.readdirSync(uploadsDir);
+    console.log(`📁 [analyze_image] 目录中的文件: ${files.length} 个`);
     
     const matchedFile = files.find((file: string) => {
-      return file === filename || 
-             file.includes(filename) || 
+      // 精确匹配
+      if (file === filename) return true;
+      
+      // 匹配去除时间戳的文件名
+      const withoutTimestamp = file.replace(/^\d+-/, '');
+      if (withoutTimestamp === filename) return true;
+      
+      // 模糊匹配
+      return file.includes(filename) || 
              filename.includes(file) ||
              file.toLowerCase().includes(filename.toLowerCase());
     });
+    
+    console.log(`🔍 [analyze_image] 匹配结果: ${matchedFile || '未找到'}`);
     
     if (!matchedFile) {
       return {
