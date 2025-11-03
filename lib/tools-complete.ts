@@ -1763,9 +1763,39 @@ async function createPresentation(
   slides: Array<{ title: string; content: string }>,
   presentationTitle?: string
 ) {
-  // 使用 Aspose（路径问题已修复）
-  // Carbone HTML→PPTX 质量不够好，先用回 Aspose
-  return await createPresentationAspose(filename, slides, presentationTitle);
+  try {
+    console.log(`📊 开始创建 PPT: ${filename}, 幻灯片数: ${slides.length}`);
+    console.log(`🎨 使用 Carbone ODP 模板生成`);
+    
+    // 使用 Carbone 生成 PPT
+    const { buffer, filename: pptxFilename } = await generatePPTWithCarbone(
+      filename,
+      slides,
+      presentationTitle
+    );
+    
+    // 上传到云存储
+    const downloadUrl = await uploadAndGetUrl(buffer, pptxFilename, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
+    
+    console.log(`✅ PPT 生成成功: ${pptxFilename}, 文件大小: ${(buffer.length / 1024).toFixed(2)} KB`);
+    
+    return {
+      success: true,
+      filename: pptxFilename,
+      slides_count: slides.length,
+      download_url: downloadUrl,
+      size: `${(buffer.length / 1024).toFixed(2)} KB`,
+      note: `✅ PPT 已生成，点击下载: ${downloadUrl}`
+    };
+  } catch (error: any) {
+    console.error('❌ PPT 创建失败:', error.message);
+    return {
+      error: "PPT 创建失败",
+      message: error.message,
+      filename: filename,
+      note: "PPT 生成遇到问题，请检查幻灯片内容或稍后重试"
+    };
+  }
 }
 
 // Aspose 实现（已修复路径问题，使用 /tmp）

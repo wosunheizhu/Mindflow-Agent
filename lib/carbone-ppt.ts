@@ -4,7 +4,7 @@
  */
 
 const CARBONE_API_KEY = process.env.CARBONE_API_KEY || 'eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxMjgwNTA3MDU0OTEyNzYxNzQ5IiwiYXVkIjoiY2FyYm9uZSIsImV4cCI6MjQyNDM2MzcyNiwiZGF0YSI6eyJ0eXBlIjoicHJvZCJ9fQ.AXMe7WXAYhGjU_7e4WkzUt0kZh6JMkm1LCisatVC8JUYsuYXG9rnf25JQ0VPSdxhPlcL13incPWhwmwD8Lukq5erAVT82zfx3B7IlsZWPlYFck70gnomK14NDHfUjzThydanBP5AhQ6mTLA7XiFmPwndJMoOhedIQmkf3IHLUHoO_gLg';
-const CARBONE_TEMPLATE_ID = process.env.CARBONE_PPT_TEMPLATE_ID || '35f9714f419f7a26bc7e5c557b14f51c0262d394ef97d240bd4a736e2492e0a4';
+const CARBONE_TEMPLATE_ID = process.env.CARBONE_PPT_TEMPLATE_ID || '4e8cd3240e5a00b02fb4cf91cfd55b22915146b89e56a4b9848ad68b12818edd';
 const CARBONE_BASE_URL = 'https://api.carbone.io';
 const CARBONE_VERSION = '4';
 
@@ -45,42 +45,10 @@ export async function generatePPTWithCarbone(
 ): Promise<{ buffer: Buffer; filename: string }> {
   try {
     const axios = require('axios');
-    const FormData = require('form-data');
     
-    console.log(`🎨 使用 Carbone 生成 PPT: ${filename}, 幻灯片数: ${slides.length}`);
-    console.log(`⚠️ Carbone 模板暂不可用，降级使用 HTML → PPTX 方案`);
+    console.log(`🎨 使用 Carbone ODP 模板生成 PPT: ${filename}, 幻灯片数: ${slides.length}`);
     
-    // 方案：创建富文本 HTML，Carbone 可以转换为 PPTX
-    let htmlTemplate = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>{d.title}</title>
-  <style>
-    .slide { page-break-after: always; padding: 40px; min-height: 500px; }
-    h1 { color: #1e3a8a; font-size: 32px; margin-bottom: 20px; }
-    h2 { color: #2563eb; font-size: 24px; margin: 30px 0 15px 0; }
-    .subtitle { color: #6b7280; font-size: 18px; margin-bottom: 40px; }
-    ul { margin: 20px 0; padding-left: 30px; }
-    li { margin: 10px 0; font-size: 16px; line-height: 1.6; }
-  </style>
-</head>
-<body>
-  <div class="slide">
-    <h1>{d.title}</h1>
-    <div class="subtitle">{d.subtitle}</div>
-  </div>
-  
-  <div class="slide">
-    <h2>{d.slides[i].title}</h2>
-    <ul>
-      <li>{d.slides[i].bullets[j]}</li>
-    </ul>
-  </div>
-</body>
-</html>`;
-    
-    // 准备数据
+    // 准备数据（符合 ODP 模板的结构）
     const presentationData = {
       title: title || filename,
       subtitle: `共 ${slides.length} 页 | 生成时间：${new Date().toLocaleDateString('zh-CN')}`,
@@ -95,38 +63,14 @@ export async function generatePPTWithCarbone(
       }))
     };
     
-    console.log(`📋 幻灯片数据准备完成`);
+    console.log(`📋 使用 ODP 模板 ID: ${CARBONE_TEMPLATE_ID.substring(0, 20)}...`);
+    console.log(`📊 幻灯片数据:`, JSON.stringify(presentationData, null, 2));
     
-    // 1. 上传 HTML 模板
-    const formData = new FormData();
-    formData.append('template', Buffer.from(htmlTemplate, 'utf-8'), {
-      filename: 'template.html',
-      contentType: 'text/html'
-    });
-    
-    console.log('📤 上传 HTML 模板到 Carbone...');
-    
-    const uploadResponse = await axios.post(
-      `${CARBONE_BASE_URL}/template`,
-      formData,
-      {
-        headers: {
-          'Authorization': `Bearer ${CARBONE_API_KEY}`,
-          'carbone-version': CARBONE_VERSION,
-          ...formData.getHeaders()
-        },
-        timeout: 30000
-      }
-    );
-    
-    const templateId = uploadResponse.data.data.templateId;
-    console.log(`✅ HTML 模板上传成功，ID: ${templateId.substring(0, 20)}...`);
-    
-    // 2. 渲染为 PPTX
-    console.log('🎨 渲染 HTML → PPTX...');
+    // 使用预先上传的 ODP 模板渲染为 PPTX（一步直下）
+    console.log('🎨 渲染 ODP → PPTX...');
     
     const renderResponse = await axios.post(
-      `${CARBONE_BASE_URL}/render/${templateId}?download=true`,
+      `${CARBONE_BASE_URL}/render/${CARBONE_TEMPLATE_ID}?download=true`,
       {
         data: presentationData,
         convertTo: 'pptx'
@@ -147,6 +91,11 @@ export async function generatePPTWithCarbone(
     
     console.log(`✅ Carbone PPT 生成成功: ${pptxFilename}, 大小: ${(buffer.length / 1024).toFixed(2)} KB`);
     
+    // 验证文件大小（太小可能有问题）
+    if (buffer.length < 10000) {
+      console.warn(`⚠️ 警告：生成的 PPT 文件很小 (${buffer.length} bytes)，可能不完整`);
+    }
+    
     return {
       buffer,
       filename: pptxFilename
@@ -159,7 +108,7 @@ export async function generatePPTWithCarbone(
         const errorText = Buffer.from(error.response.data).toString('utf-8');
         console.error('Carbone 错误详情:', errorText);
       } catch (e) {
-        console.error('响应数据:', error.response.data);
+        console.error('响应状态:', error.response?.status);
       }
     }
     throw new Error(`Carbone PPT 生成失败: ${error.message}`);
