@@ -68,7 +68,7 @@ export async function generatePPTWithCarbone(
       author: 'Mindflow AI',
       date: new Date().toLocaleDateString('zh-CN'),
       
-      // 幻灯片数据
+      // 幻灯片数据（包含所有页）
       slides: slides.map((slide, index) => ({
         number: index + 1,
         title: slide.title,
