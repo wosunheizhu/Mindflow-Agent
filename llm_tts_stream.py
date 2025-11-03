@@ -168,10 +168,17 @@ class LLMTTSStreamer:
 
 关键判断依据（必须仔细区分）：
 
-真正生成的文件（可以说"生成了X份"）：
-   - 有明确的文件名（.docx/.xlsx/.pptx/.pdf/.md等）
-   - 有下载链接（通常以/api/download/开头）
-   - AI的回复中明确说"文件已创建"或提供了下载链接
+AI生成的文件（可以说"生成了X份"）：
+   - 有明确的描述性文件名（report.docx、analysis.xlsx 等）
+   - 有下载链接（/api/download/ 或 blob.vercel-storage.com）
+   - AI的回复中明确说"文件已创建""已生成""点击下载"
+   - 文件名不是随机数字或时间戳开头
+
+用户上传的文件（不能说"AI生成了"）：
+   - 文件名以时间戳开头（如 1762151942650-image.webp）
+   - 工具调用是 read_file 或 analyze_image
+   - 应该说"AI分析了图片""AI读取了文件"
+   - 不能说"AI生成了图片""AI生成了文档"
 
 搜索结果链接（不能说"生成了X份"）：
    - 以 https:// 开头的网站链接
@@ -185,11 +192,15 @@ class LLMTTSStreamer:
 错误示例：
 - "AI生成了5份报告"（实际是搜索到5个链接）
 - "完成了3个文档"（实际只是引用了3个网页）
+- "AI生成了图片"（实际是用户上传的图片，AI只是分析了）
+- "AI生成了文件"（实际是用户上传的文件，AI只是读取了）
 
 正确示例：
 - "AI搜索了行业趋势，找到5个参考资料"
 - "AI分析了市场数据并给出了结论"
-- "AI生成了1份报告文件（report.pdf）"
+- "AI生成了1份Word报告（analysis.docx）"
+- "AI分析了你上传的图片"
+- "AI读取了你的文件"
 
 #以下是一些关于你的关键词：名字是"{self.persona['name']}"，中国人，{self.persona['personality']}
 
@@ -221,10 +232,17 @@ class LLMTTSStreamer:
 
 关键判断依据（必须仔细区分）：
 
-真正生成的文件（可以说"生成了X份"）：
-   - 有明确的文件名（.docx/.xlsx/.pptx/.pdf/.md等）
-   - 有下载链接（通常以/api/download/开头）
-   - AI的回复中明确说"文件已创建"或提供了下载链接
+AI生成的文件（可以说"生成了X份"）：
+   - 有明确的描述性文件名（report.docx、analysis.xlsx 等）
+   - 有下载链接（/api/download/ 或 blob.vercel-storage.com）
+   - AI的回复中明确说"文件已创建""已生成""点击下载"
+   - 文件名不是随机数字或时间戳开头
+
+用户上传的文件（不能说"AI生成了"）：
+   - 文件名以时间戳开头（如 1762151942650-image.webp）
+   - 工具调用是 read_file 或 analyze_image
+   - 应该说"AI分析了图片""AI读取了文件"
+   - 不能说"AI生成了图片""AI生成了文档"
 
 搜索结果链接（不能说"生成了X份"）：
    - 以 https:// 开头的网站链接
@@ -238,11 +256,15 @@ class LLMTTSStreamer:
 错误示例：
 - "AI生成了5份报告"（实际是搜索到5个链接）
 - "完成了3个文档"（实际只是引用了3个网页）
+- "AI生成了图片"（实际是用户上传的图片，AI只是分析了）
+- "AI生成了文件"（实际是用户上传的文件，AI只是读取了）
 
 正确示例：
 - "AI搜索了行业趋势，找到5个参考资料"
 - "AI分析了市场数据并给出了结论"
-- "AI生成了1份报告文件（report.pdf）"
+- "AI生成了1份Word报告（analysis.docx）"
+- "AI分析了你上传的图片"
+- "AI读取了你的文件"
 
 #以下是一些关于你的关键词：名字是"{self.persona['name']}"，中国人，{self.persona['personality']}
 
