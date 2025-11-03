@@ -425,9 +425,16 @@ export async function POST(req: NextRequest): Promise<Response> {
                 // 检查是否有工具调用
                 if (gpt5Response.tool_calls && gpt5Response.tool_calls.length > 0) {
                   console.log(`🔧 GPT-5 Pro 请求调用 ${gpt5Response.tool_calls.length} 个工具`);
+                  console.log(`📋 [GPT5-Pro] 完整 tool_calls:`, JSON.stringify(gpt5Response.tool_calls, null, 2));
                   
                   // 发送工具调用通知到前端
                   for (const toolCall of gpt5Response.tool_calls) {
+                    // 验证工具调用数据
+                    if (!toolCall.name) {
+                      console.error(`❌ [GPT5-Pro] 工具名称为空:`, toolCall);
+                      continue;
+                    }
+                    
                     controller.enqueue(
                       encoder.encode(`data: ${JSON.stringify({
                         type: "tool_call",
@@ -440,9 +447,21 @@ export async function POST(req: NextRequest): Promise<Response> {
                   // 执行工具调用
                   for (const toolCall of gpt5Response.tool_calls) {
                     const toolName = toolCall.name;
-                    const toolArgs = JSON.parse(toolCall.arguments || '{}');
                     
-                    console.log(`🔧 执行工具: ${toolName}`, toolArgs);
+                    if (!toolName || toolName.trim() === '') {
+                      console.error(`❌ [GPT5-Pro] 跳过空工具名称:`, toolCall);
+                      continue;
+                    }
+                    
+                    let toolArgs;
+                    try {
+                      toolArgs = JSON.parse(toolCall.arguments || '{}');
+                    } catch (e) {
+                      console.error(`❌ [GPT5-Pro] 参数解析失败:`, toolCall.arguments);
+                      toolArgs = {};
+                    }
+                    
+                    console.log(`🔧 [GPT5-Pro] 执行工具: ${toolName}`, toolArgs);
                     
                     try {
                       const toolResult = await executeToolCall(toolName, toolArgs);
@@ -613,9 +632,16 @@ export async function POST(req: NextRequest): Promise<Response> {
                 // 检查是否有工具调用（与 Pro 版本相同的逻辑）
                 if (gpt5Response.tool_calls && gpt5Response.tool_calls.length > 0) {
                   console.log(`🔧 GPT-5 Thinking 请求调用 ${gpt5Response.tool_calls.length} 个工具`);
+                  console.log(`📋 [GPT5-Thinking] 完整 tool_calls:`, JSON.stringify(gpt5Response.tool_calls, null, 2));
                   
                   // 发送工具调用通知到前端
                   for (const toolCall of gpt5Response.tool_calls) {
+                    // 验证工具调用数据
+                    if (!toolCall.name) {
+                      console.error(`❌ [GPT5-Thinking] 工具名称为空:`, toolCall);
+                      continue;
+                    }
+                    
                     controller.enqueue(
                       encoder.encode(`data: ${JSON.stringify({
                         type: "tool_call",
@@ -628,9 +654,21 @@ export async function POST(req: NextRequest): Promise<Response> {
                   // 执行工具调用
                   for (const toolCall of gpt5Response.tool_calls) {
                     const toolName = toolCall.name;
-                    const toolArgs = JSON.parse(toolCall.arguments || '{}');
                     
-                    console.log(`🔧 执行工具: ${toolName}`, toolArgs);
+                    if (!toolName || toolName.trim() === '') {
+                      console.error(`❌ [GPT5-Thinking] 跳过空工具名称:`, toolCall);
+                      continue;
+                    }
+                    
+                    let toolArgs;
+                    try {
+                      toolArgs = JSON.parse(toolCall.arguments || '{}');
+                    } catch (e) {
+                      console.error(`❌ [GPT5-Thinking] 参数解析失败:`, toolCall.arguments);
+                      toolArgs = {};
+                    }
+                    
+                    console.log(`🔧 [GPT5-Thinking] 执行工具: ${toolName}`, toolArgs);
                     
                     try {
                       const toolResult = await executeToolCall(toolName, toolArgs);
