@@ -1380,13 +1380,15 @@ async function createDocumentTool(filename: string, content: string, format: str
         const ws = XLSX.utils.aoa_to_sheet(data);
         
         // 设置列宽（自动调整）
-        const colWidths = data[0]?.map((_, colIndex) => {
-          const maxLen = Math.max(...data.map(row => 
+        const colWidths = data[0]?.map((_cell: any, colIndex: number) => {
+          const maxLen = Math.max(...data.map((row: any[]) => 
             String(row[colIndex] || '').length
           ));
           return { wch: Math.min(maxLen + 2, 50) }; // 最大50字符宽
         });
-        ws['!cols'] = colWidths;
+        if (colWidths) {
+          ws['!cols'] = colWidths;
+        }
         
         XLSX.utils.book_append_sheet(wb, ws, options?.sheetName || 'Sheet1');
         const arrayBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
