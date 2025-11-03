@@ -26,24 +26,11 @@ from llm_tts_stream import LLMTTSStreamer
 
 app = FastAPI(title="语音服务API", version="1.0.0")
 
-# 配置CORS - 支持生产环境
-allowed_origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-]
-
-# 如果设置了生产环境的前端URL，添加到允许列表
-frontend_url = os.getenv("FRONTEND_URL")
-if frontend_url:
-    allowed_origins.append(frontend_url)
-    # 同时允许 www 子域名
-    if not frontend_url.startswith("www."):
-        allowed_origins.append(frontend_url.replace("://", "://www."))
-
+# 配置CORS - 允许所有域名（适用于公共 API）
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_credentials=True,
+    allow_origins=["*"],  # 允许所有域名
+    allow_credentials=False,  # 允许所有域名时必须设为 False
     allow_methods=["*"],
     allow_headers=["*"],
 )
