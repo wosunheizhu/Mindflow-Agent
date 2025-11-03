@@ -600,8 +600,6 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                   // 尝试播放（如果轮到它了就会播放）
                   playNext();
                 } else if (parsed.type === 'done') {
-                  setCurrentReply('');
-                  
                   // 使用 ref 获取推理内容（避免 React 状态异步问题）
                   const savedReasoning = reasoningRef.current;
                   console.log('💾 [done] 从 reasoningRef 读取: ' + savedReasoning.length + ' 字符');
@@ -678,8 +676,12 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                       if (promptSent) {
                         console.log(`📨 本次对话已触发Agentic AI任务`);
                       }
+                      
+                      // 消息已添加到历史，现在可以清除当前回复
+                      setCurrentReply('');
                     } else {
                       console.log(`ℹ️ 显示文本为空（可能全是提示词），不添加到历史`);
+                      setCurrentReply(''); // 即使没有显示文本也要清除
                     }
                   }
                   setCurrentReasoning(''); // 清空推理内容
@@ -705,10 +707,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
       reasoningRef.current = '';
     } finally {
       setChatLoading(false);
-      // 确保清除状态
-      setCurrentReply('');
-      setCurrentReasoning('');
-      setCurrentReasoningExpanded(false);
+      // 注意：不要在这里清除 currentReply，否则回复会消失
+      // setCurrentReply 应该在消息添加到历史后清除（在流处理中已处理）
     }
   };
 
