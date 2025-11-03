@@ -78,8 +78,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   
   const [expandedReasoning, setExpandedReasoning] = useState<{[key: number]: boolean}>({}); // 每条消息的推理展开状态
   const [currentReasoningExpanded, setCurrentReasoningExpanded] = useState(false); // 当前推理的展开状态
-  // 上传功能已移除
-  // const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  // 文件上传功能已移除
+  // const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); // 上传的文件
   const [lastSummaryText, setLastSummaryText] = useState(''); // 上一次总结内容（用于去重）
   const [lastSummaryTime, setLastSummaryTime] = useState(0); // 上一次总结时间（用于去重）
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -93,8 +93,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  // 上传功能已移除
-  // const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // const fileInputRef = useRef<HTMLInputElement | null>(null); // 文件上传已移除
   const reasoningRef = useRef<string>(''); // 用 ref 实时跟踪 reasoning 内容
   const audioQueueRef = useRef<Map<number, Blob>>(new Map()); // 音频播放队列
   const currentlyPlayingRef = useRef<boolean>(false); // 是否正在播放
@@ -321,17 +320,16 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   }, [selectedAvatar]);
 
   // 文件上传处理
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    // 上传功能已移除
-    // setUploadedFiles([...uploadedFiles, ...files]);
-    // toast.success(`已添加 ${files.length} 个文件`);
-  };
+  // 文件上传功能已移除
+  // const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   const files = Array.from(e.target.files || []);
+  //   setUploadedFiles([...uploadedFiles, ...files]);
+  //   toast.success(`已添加 ${files.length} 个文件`);
+  // };
 
-  const removeFile = (index: number) => {
-    // 上传功能已移除
-    // setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
-  };
+  // const removeFile = (index: number) => {
+  //   setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  // };
 
   // 语音录制功能
   // startRecording 已移除 - 改用登录提示
@@ -365,7 +363,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     }
 
     let messageContent = chatInput;
-    // 上传功能已移除
+    // 文件上传功能已移除
     const userMessage = messageContent;
     const currentHistory = chatHistory; // 保存当前历史
     
@@ -485,7 +483,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
           history: currentHistory, // 发送当前历史（不包括刚添加的用户消息）
           agent_working: isAgentWorking, // 发送Agentic AI工作状态
           deep_thinking: deepThinking, // 控制小助理本身（豆包 LLM）的深度思考
-          uploaded_files: [] // 上传功能已移除
+          uploaded_files: [] // 文件上传已移除
         })
       });
       
@@ -600,6 +598,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                   // 尝试播放（如果轮到它了就会播放）
                   playNext();
                 } else if (parsed.type === 'done') {
+                  setCurrentReply('');
+                  
                   // 使用 ref 获取推理内容（避免 React 状态异步问题）
                   const savedReasoning = reasoningRef.current;
                   console.log('💾 [done] 从 reasoningRef 读取: ' + savedReasoning.length + ' 字符');
@@ -676,12 +676,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                       if (promptSent) {
                         console.log(`📨 本次对话已触发Agentic AI任务`);
                       }
-                      
-                      // 消息已添加到历史，现在可以清除当前回复
-                      setCurrentReply('');
                     } else {
                       console.log(`ℹ️ 显示文本为空（可能全是提示词），不添加到历史`);
-                      setCurrentReply(''); // 即使没有显示文本也要清除
                     }
                   }
                   setCurrentReasoning(''); // 清空推理内容
@@ -703,12 +699,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
       console.error('小助理对话错误:', error);
       toast.error('对话失败');
       setCurrentReply('');
-      setCurrentReasoning('');
-      reasoningRef.current = '';
     } finally {
       setChatLoading(false);
-      // 注意：不要在这里清除 currentReply，否则回复会消失
-      // setCurrentReply 应该在消息添加到历史后清除（在流处理中已处理）
     }
   };
 
@@ -754,7 +746,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                 <select
                   value={selectedAvatar}
                   onChange={(e) => setSelectedAvatar(e.target.value)}
-                  className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 min-w-[80px]"
+                  className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
                 >
                   <option value="zh_female_sajiaonvyou_moon_bigtts">小岚</option>
                   <option value="zh_male_shaonianzixin_moon_bigtts">小远</option>
@@ -811,7 +803,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
             <select
               value={selectedAvatar}
               onChange={(e) => setSelectedAvatar(e.target.value)}
-              className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer min-w-[80px]"
+              className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
               title="选择小助理"
             >
               <option value="zh_female_sajiaonvyou_moon_bigtts">小岚</option>
@@ -1026,14 +1018,10 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
 
           {/* 输入区域 */}
           <div className="card p-4 flex-shrink-0">
-            {/* 文件上传区域 */}
-            {/* 上传功能已移除 */}
+            {/* 文件上传功能已移除 */}
 
             {/* 功能选项栏 */}
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-              {/* 上传功能已移除 */}
-              
-              <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
               
               <button
                 onClick={() => setDeepThinking(!deepThinking)}
