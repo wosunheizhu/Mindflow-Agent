@@ -736,7 +736,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                 <select
                   value={selectedAvatar}
                   onChange={(e) => setSelectedAvatar(e.target.value)}
-                  className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                  className="text-xs px-2 py-1 pr-8 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 min-w-[70px]"
                 >
                   <option value="zh_female_sajiaonvyou_moon_bigtts">小岚</option>
                   <option value="zh_male_shaonianzixin_moon_bigtts">小远</option>
@@ -793,7 +793,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
             <select
               value={selectedAvatar}
               onChange={(e) => setSelectedAvatar(e.target.value)}
-              className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+              className="text-xs px-2 py-1 pr-8 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer min-w-[70px]"
               title="选择小助理"
             >
               <option value="zh_female_sajiaonvyou_moon_bigtts">小岚</option>
