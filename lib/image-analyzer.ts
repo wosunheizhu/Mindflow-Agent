@@ -54,7 +54,7 @@ export async function analyzeImage(filepath: string, question?: string): Promise
     return {
       analysis: response.choices[0].message.content,
       model: "gpt-4o",
-      // imageUrl 已移除（太长导致响应超大）
+      imageUrl: imageUrl,
       note: "✅ 使用 GPT-4o Vision 分析图片",
     };
   } catch (error: any) {

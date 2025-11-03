@@ -881,22 +881,21 @@ export default function ChatPage() {
             <select 
               value={selectedModel} 
               onChange={(e) => {
-                const newModel = e.target.value;
-                // 拦截 beta-testing 模型
+                const newModel = e.target.value as 'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude';
+                // Beta Testing 模型需要登录
                 if (newModel === 'gpt5-pro' || newModel === 'gpt5-thinking' || newModel === 'claude') {
                   setShowLoginPrompt(true);
-                  // 不切换模型
                   return;
                 }
-                setSelectedModel(newModel as 'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude');
+                setSelectedModel(newModel);
               }}
               className="select text-sm py-1 px-2"
               disabled={loading}
             >
               <option value="openai">Mindflow-Y-Workflow（推荐-自动工作流）</option>
-              <option value="gpt5-pro">Mindflow-Y-Pro（Beta-Testing）</option>
-              <option value="gpt5-thinking">Mindflow-Y（Beta-Testing）</option>
-              <option value="claude">Mindflow-X-Workflow（Beta-Testing）</option>
+              <option value="gpt5-pro">Mindflow-Y-Pro（Beta Testing-强推理）</option>
+              <option value="gpt5-thinking">Mindflow-Y（Beta Testing-强推理）</option>
+              <option value="claude">Mindflow-X-Workflow（Beta Testing）</option>
             </select>
             {messages.length > 0 && (
               <button

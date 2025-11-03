@@ -132,13 +132,6 @@ export async function POST(req: NextRequest): Promise<Response> {
 - **凡是涉及时事、新闻、最新发展等时效性内容，必须先使用 search_web 工具搜索最新信息**
 - **使用搜索工具获取信息后，必须在回答中附上参考资料的原始链接，方便用户查看来源**
 
-### 文件和图片处理（重要）
-- **用户上传图片时**：自动使用 analyze_image 工具分析图片内容，回答用户关于图片的问题
-- **用户上传文件时**：使用 read_file 工具读取文件内容，然后进行分析或处理
-- **图片分析工具**：analyze_image(filename, question) - 支持识别图片内容、物体、场景、文字等
-- **文件读取工具**：read_file(filename, query) - 支持读取 PDF、Word、Excel、文本等文件
-- **不要说"无法查看图片"**：你有 analyze_image 工具，可以理解和分析任何上传的图片
-
 ### 文档生成规则（重要）
 - **直接生成目标格式**：推荐使用 Markdown 或 Word 格式
 - **禁止 PDF 格式**：不要生成 PDF，改用 Word 或 Markdown（用户可自行转换）
@@ -1055,7 +1048,7 @@ export async function POST(req: NextRequest): Promise<Response> {
                       type: "avatar_audio", 
                       audioBase64: llmTtsData.audioBase64,
                       audioSize: llmTtsData.audioSize,
-                      summaryText: llmTtsData.summaryText || "",  // 小助理的总结文本
+                      summaryText: llmTtsData.summaryText || "",  // 数字员工的总结文本
                       voice: avatarVoice 
                     })}\n\n`)
                   );

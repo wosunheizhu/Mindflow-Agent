@@ -14,7 +14,7 @@ export type ToolDefinition = {
   endpoint?: string;     // API Route
   method?: 'GET'|'POST';
   params?: ParamField[];
-  clientRunnerId?: 'doc-create'|'data-viz'|'json-csv'|'time'|'file-read'|'text-process'|'image-analysis';
+  clientRunnerId?: 'doc-create'|'data-viz'|'json-csv'|'time'|'file-read'|'text-process';
 };
 
 export type RunResult = {

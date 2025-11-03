@@ -1295,39 +1295,16 @@ async function analyzeImageTool(filename: string, question?: string) {
     const fs = require('fs');
     const path = require('path');
     
-    // 从文件系统查找图片（Vercel 环境使用 /tmp）
-    const uploadsDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
-    
-    console.log(`🖼️ [analyze_image] 查找图片目录: ${uploadsDir}`);
-    console.log(`🔍 [analyze_image] 查找文件名: ${filename}`);
-    
-    if (!fs.existsSync(uploadsDir)) {
-      console.error(`❌ [analyze_image] 目录不存在: ${uploadsDir}`);
-      return {
-        error: "上传目录不存在",
-        message: "请先上传图片文件",
-        uploadsDir: uploadsDir
-      };
-    }
-    
+    // 从文件系统查找图片
+    const uploadsDir = path.join(process.cwd(), 'uploads');
     const files = fs.readdirSync(uploadsDir);
-    console.log(`📁 [analyze_image] 目录中的文件: ${files.length} 个`);
     
     const matchedFile = files.find((file: string) => {
-      // 精确匹配
-      if (file === filename) return true;
-      
-      // 匹配去除时间戳的文件名
-      const withoutTimestamp = file.replace(/^\d+-/, '');
-      if (withoutTimestamp === filename) return true;
-      
-      // 模糊匹配
-      return file.includes(filename) || 
+      return file === filename || 
+             file.includes(filename) || 
              filename.includes(file) ||
              file.toLowerCase().includes(filename.toLowerCase());
     });
-    
-    console.log(`🔍 [analyze_image] 匹配结果: ${matchedFile || '未找到'}`);
     
     if (!matchedFile) {
       return {
@@ -1340,14 +1317,9 @@ async function analyzeImageTool(filename: string, question?: string) {
     const filepath = path.join(uploadsDir, matchedFile);
     const result = await analyzeImage(filepath, question);
     
-    // 移除 imageUrl（太长，会导致响应超时）
-    const { imageUrl, ...resultWithoutUrl } = result;
-    
     return {
       filename: matchedFile,
-      ...resultWithoutUrl,
-      // 只保留分析结果，不返回完整的 base64 图片
-      note: result.note || "✅ 使用 GPT-4o Vision 分析图片"
+      ...result,
     };
   } catch (error: any) {
     return {

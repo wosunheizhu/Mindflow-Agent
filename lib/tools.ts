@@ -40,7 +40,10 @@ export const TOOL_DEFS: ToolDefinition[] = [
             {key:'page',label:'页码（可选）',type:'number',placeholder:'不填则提取全部'}]
   },
 
-  {/* OCR 和图片理解工具已移除 */}
+  { id:'ocr-aspose', name:'OCR 识别', icon:ScanLine, category:'内容', description:'Aspose OCR 高精度文字识别', realApi:true, zeroConfig:true, endpoint:'/api/tools/aspose-ocr', method:'POST',
+    params:[{key:'file',label:'图片',type:'file',required:true},
+            {key:'language',label:'语言',type:'select',options:[{label:'自动检测',value:'auto'},{label:'中文',value:'chinese'},{label:'英文',value:'english'}],defaultValue:'auto'}]
+  },
   { id:'qrcode-gen', name:'二维码生成', icon:QrCode, category:'内容', description:'生成二维码图片', realApi:true, zeroConfig:true, endpoint:'/api/tools/aspose-qrcode', method:'POST',
     params:[{key:'text',label:'文本或链接',type:'text',required:true,placeholder:'例如：https://evercall.ai'},
             {key:'size',label:'尺寸(像素)',type:'number',defaultValue:300}]

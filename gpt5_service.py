@@ -22,7 +22,7 @@ app = FastAPI(title="GPT-5 Responses API Service")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,  # 允许所有域名时必须设为 False
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
