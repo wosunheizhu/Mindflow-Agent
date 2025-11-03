@@ -34,3 +34,5 @@ export default function ChartPreview({ type, data }: { type: 'bar'|'line'|'pie';
 
 
 
+
+

@@ -4,9 +4,7 @@
  */
 
 const CARBONE_API_KEY = process.env.CARBONE_API_KEY || 'eyJhbGciOiJFUzUxMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiIxMjgwNTA3MDU0OTEyNzYxNzQ5IiwiYXVkIjoiY2FyYm9uZSIsImV4cCI6MjQyNDM2MzcyNiwiZGF0YSI6eyJ0eXBlIjoicHJvZCJ9fQ.AXMe7WXAYhGjU_7e4WkzUt0kZh6JMkm1LCisatVC8JUYsuYXG9rnf25JQ0VPSdxhPlcL13incPWhwmwD8Lukq5erAVT82zfx3B7IlsZWPlYFck70gnomK14NDHfUjzThydanBP5AhQ6mTLA7XiFmPwndJMoOhedIQmkf3IHLUHoO_gLg';
-// 使用简单的 ODP 模板（已测试可用）
-// Google Slides 模板循环有问题，暂时回退
-const CARBONE_TEMPLATE_ID = process.env.CARBONE_PPT_TEMPLATE_ID || '4e8cd3240e5a00b02fb4cf91cfd55b22915146b89e56a4b9848ad68b12818edd';
+const CARBONE_TEMPLATE_ID = process.env.CARBONE_PPT_TEMPLATE_ID || '9ebe9f0a2cab48b780a04428bdb16938ca8bc1b3c34aabacbfb06379a76dba6e';
 const CARBONE_BASE_URL = 'https://api.carbone.io';
 const CARBONE_VERSION = '4';
 
