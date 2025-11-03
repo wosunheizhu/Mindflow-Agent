@@ -3,6 +3,18 @@ import { writeFile, mkdir } from "fs/promises";
 import path from "path";
 import { existsSync } from "fs";
 
+// 配置 API Route
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+// 增加文件大小限制到 10MB（Vercel 限制）
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '10mb',
+    },
+  },
+};
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();

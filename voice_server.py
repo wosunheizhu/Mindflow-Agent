@@ -343,8 +343,8 @@ async def avatar_chat_bidirectional(request: ChatRequest):
             
             if request.uploaded_files:
                 import os
-                import base64
-                import mimetypes
+                import base64  # base64 编码支持
+                import mimetypes  # MIME 类型检测
                 
                 for filename in request.uploaded_files:
                     try:
