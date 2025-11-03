@@ -1295,31 +1295,50 @@ async function analyzeImageTool(filename: string, question?: string) {
     const fs = require('fs');
     const path = require('path');
     
-    // 从文件系统查找图片
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    // Vercel 环境使用 /tmp 目录
+    const uploadsDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
+    
+    console.log(`🖼️ [analyze_image] 查找图片: ${filename}`);
+    console.log(`📂 [analyze_image] 上传目录: ${uploadsDir}`);
+    
+    if (!fs.existsSync(uploadsDir)) {
+      return {
+        error: "上传目录不存在",
+        message: "请先上传图片文件",
+      };
+    }
+    
     const files = fs.readdirSync(uploadsDir);
+    console.log(`📋 [analyze_image] 目录中的文件: ${files.length} 个`);
     
     const matchedFile = files.find((file: string) => {
-      return file === filename || 
-             file.includes(filename) || 
+      // 精确匹配或去除时间戳匹配
+      if (file === filename) return true;
+      const withoutTimestamp = file.replace(/^\d+-/, '');
+      if (withoutTimestamp === filename) return true;
+      return file.includes(filename) || 
              filename.includes(file) ||
              file.toLowerCase().includes(filename.toLowerCase());
     });
     
     if (!matchedFile) {
+      console.error(`❌ [analyze_image] 图片未找到: ${filename}`);
       return {
         error: "图片未找到",
         message: `图片 "${filename}" 不存在`,
-        availableFiles: files,
       };
     }
+    
+    console.log(`✅ [analyze_image] 找到图片: ${matchedFile}`);
     
     const filepath = path.join(uploadsDir, matchedFile);
     const result = await analyzeImage(filepath, question);
     
+    // 返回结果，但移除过长的字段
     return {
       filename: matchedFile,
-      ...result,
+      description: result.description || result.result || result.analysis,
+      // 不返回 provider, imageUrl 等冗长字段
     };
   } catch (error: any) {
     return {
