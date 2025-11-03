@@ -48,19 +48,43 @@ export async function generatePPTWithCarbone(
     
     console.log(`🎨 使用 Carbone ODP 模板生成 PPT: ${filename}, 幻灯片数: ${slides.length}`);
     
-    // 准备数据（符合 ODP 模板的结构）
+    // 准备数据（兼容多种可能的占位符）
+    const mainTitle = title || filename;
+    const mainSubtitle = `共 ${slides.length} 页 | 生成时间：${new Date().toLocaleDateString('zh-CN')}`;
+    
     const presentationData = {
-      title: title || filename,
-      subtitle: `共 ${slides.length} 页 | 生成时间：${new Date().toLocaleDateString('zh-CN')}`,
+      // 标题的多种可能字段名
+      title: mainTitle,
+      presentation_title: mainTitle,
+      main_title: mainTitle,
+      cover_title: mainTitle,
+      
+      // 副标题的多种可能字段名
+      subtitle: mainSubtitle,
+      presentation_subtitle: mainSubtitle,
+      description: mainSubtitle,
+      
+      // 其他可能有用的字段
+      author: 'Mindflow AI',
+      date: new Date().toLocaleDateString('zh-CN'),
+      
+      // 幻灯片数据
       slides: slides.map((slide, index) => ({
         number: index + 1,
         title: slide.title,
+        content: slide.content,
         bullets: slide.content.split('\n')
           .filter(line => line.trim())
           .filter(line => !line.startsWith('#'))
           .map(line => line.replace(/^[\-\*]\s*/, '').trim())
           .filter(line => line.length > 0)
-      }))
+      })),
+      
+      // 为了兼容，也添加第一张幻灯片作为标题
+      cover: {
+        title: mainTitle,
+        subtitle: mainSubtitle
+      }
     };
     
     console.log(`📋 使用 ODP 模板 ID: ${CARBONE_TEMPLATE_ID.substring(0, 20)}...`);
