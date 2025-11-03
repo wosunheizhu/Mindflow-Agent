@@ -1147,36 +1147,60 @@ async function readFileContent(filename: string, query?: string) {
     const fs = require('fs');
     const path = require('path');
     
-    // 从文件系统读取文件列表（更可靠，不依赖内存）
-    const uploadsDir = path.join(process.cwd(), 'uploads');
+    // 从文件系统读取文件列表（Vercel 环境使用 /tmp）
+    const uploadsDir = process.env.VERCEL ? '/tmp' : path.join(process.cwd(), 'uploads');
     let actualFilepath = '';
     let actualFileType = '';
     
+    console.log(`📂 [read_file] 检查上传目录: ${uploadsDir}`);
+    
     // 检查 uploads 目录是否存在
     if (!fs.existsSync(uploadsDir)) {
+      console.error(`❌ [read_file] 目录不存在: ${uploadsDir}`);
       return {
         error: "上传目录不存在",
         message: "请先上传文件",
+        uploadsDir: uploadsDir,
       };
     }
+    
+    console.log(`✅ [read_file] 上传目录存在`);
+
     
     // 读取目录中的所有文件
     const files = fs.readdirSync(uploadsDir);
     
+    console.log(`📁 [read_file] 目录中的文件: ${files.length} 个`);
+    console.log(`📋 [read_file] 文件列表:`, files.slice(0, 10));
+    
     if (files.length === 0) {
       return {
         error: "没有已上传的文件",
-        message: "请先上传文件",
+        message: "请先上传文件到聊天页面",
       };
     }
     
-    // 查找匹配的文件（支持模糊匹配）
+    // 查找匹配的文件（支持模糊匹配和时间戳前缀）
     const matchedFile = files.find((file: string) => {
-      return file === filename || 
-             file.includes(filename) || 
-             filename.includes(file) ||
-             file.toLowerCase().includes(filename.toLowerCase());
+      // 精确匹配
+      if (file === filename) return true;
+      
+      // 匹配去除时间戳的文件名（格式：timestamp-filename.ext）
+      const withoutTimestamp = file.replace(/^\d+-/, '');
+      if (withoutTimestamp === filename) return true;
+      
+      // 模糊匹配
+      if (file.includes(filename) || 
+          filename.includes(file) ||
+          file.toLowerCase().includes(filename.toLowerCase()) ||
+          withoutTimestamp.toLowerCase().includes(filename.toLowerCase())) {
+        return true;
+      }
+      
+      return false;
     });
+    
+    console.log(`🔍 [read_file] 查找文件"${filename}"，匹配结果: ${matchedFile || '未找到'}`);
     
     if (!matchedFile) {
       return {

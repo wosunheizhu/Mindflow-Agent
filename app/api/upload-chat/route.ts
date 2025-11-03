@@ -30,10 +30,11 @@ export async function POST(request: NextRequest) {
       await writeFile(filepath, buffer);
 
       uploadedFiles.push({
-        filename: file.name,
+        filename: filename, // 使用带时间戳的完整文件名
+        originalName: file.name,
         size: file.size,
         type: file.type,
-        path: `uploads/${filename}`,
+        path: filepath, // 完整路径
       });
     }
 
