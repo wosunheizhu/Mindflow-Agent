@@ -352,38 +352,12 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     }
 
     let messageContent = chatInput;
-    let uploadedFilePaths: string[] = [];
-
-    // 如果有上传的文件，先上传到服务器
-    if (uploadedFiles.length > 0) {
-      try {
-        const formData = new FormData();
-        uploadedFiles.forEach(file => formData.append('files', file));
-
-        const uploadRes = await fetch('/api/upload-chat', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          uploadedFilePaths = uploadData.files.map((f: any) => f.filename);
-          const fileInfo = uploadData.files.map((f: any) => `[${f.type.startsWith('image/') ? '图片' : '文件'}: ${f.filename}]`).join(' ');
-          messageContent = `${fileInfo}\n\n${chatInput || '请分析这些文件'}`;
-          toast.success('文件上传成功');
-        }
-      } catch (err) {
-        toast.error('文件上传失败');
-        setChatLoading(false);
-        return;
-      }
-    }
-
+    // 文件上传功能已完全移除
+    
     const userMessage = messageContent;
     const currentHistory = chatHistory; // 保存当前历史
     
     setChatInput('');
-    setUploadedFiles([]);
     setChatLoading(true);
     setCurrentReply(''); // 清空当前回复，准备接收新回复
     setCurrentReasoning(''); // 清空推理内容
