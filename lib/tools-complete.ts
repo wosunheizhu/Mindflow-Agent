@@ -12,6 +12,35 @@ import { uploadFile } from "./blob-storage";
 import { generatePPTWithCarbone } from "./carbone-ppt";
 
 /**
+ * 解析 Markdown 表格为二维数组
+ */
+function parseMarkdownTable(markdown: string): string[][] {
+  const lines = markdown.trim().split('\n');
+  const data: string[][] = [];
+  
+  for (const line of lines) {
+    // 跳过分隔线（例如 |---|---|）
+    if (line.trim().match(/^\|[\s\-:]+\|$/)) {
+      continue;
+    }
+    
+    // 解析表格行
+    if (line.trim().startsWith('|')) {
+      const cells = line
+        .split('|')
+        .map(cell => cell.trim())
+        .filter(cell => cell.length > 0); // 移除首尾空元素
+      
+      if (cells.length > 0) {
+        data.push(cells);
+      }
+    }
+  }
+  
+  return data;
+}
+
+/**
  * 上传文件并返回下载URL
  * 优先使用云存储，降级到本地存储
  */
@@ -1318,9 +1347,36 @@ async function createDocumentTool(filename: string, content: string, format: str
       case 'excel': {
         if (!outFilename.endsWith('.xlsx')) outFilename += '.xlsx';
         mime = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-        const data = options?.data || [[content]];
+        
+        let data;
+        
+        // 如果有 options.data，直接使用
+        if (options?.data) {
+          data = options.data;
+        } 
+        // 如果 content 是 Markdown 表格格式，解析它
+        else if (typeof content === 'string' && content.includes('|')) {
+          console.log('📊 检测到 Markdown 表格格式，开始解析...');
+          data = parseMarkdownTable(content);
+          console.log(`✅ 解析完成：${data.length} 行 x ${data[0]?.length || 0} 列`);
+        }
+        // 否则作为单行数据
+        else {
+          data = [[content]];
+        }
+        
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(data);
+        
+        // 设置列宽（自动调整）
+        const colWidths = data[0]?.map((_, colIndex) => {
+          const maxLen = Math.max(...data.map(row => 
+            String(row[colIndex] || '').length
+          ));
+          return { wch: Math.min(maxLen + 2, 50) }; // 最大50字符宽
+        });
+        ws['!cols'] = colWidths;
+        
         XLSX.utils.book_append_sheet(wb, ws, options?.sheetName || 'Sheet1');
         const arrayBuf = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
         buffer = Buffer.from(arrayBuf);
