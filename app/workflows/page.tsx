@@ -4,6 +4,8 @@ import { Search, Code2, FileText, BarChart3, Globe, Play, Save, Plus, Trash2, Do
 import toast from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import 'reactflow/dist/style.css';
+import LoginPrompt from '../../components/LoginPrompt';
+import LoginModal from '../../components/LoginModal';
 
 const ReactFlow = dynamic(() => import('reactflow'), { ssr: false });
 const Background = dynamic(() => import('reactflow').then(m => m.Background), { ssr: false });
@@ -20,6 +22,9 @@ const nodeTypes = [
 ];
 
 export default function WorkflowsPage() {
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  
   const [nodes, setNodes] = useState<any[]>([
     { 
       id:'n1', 
@@ -204,19 +209,19 @@ export default function WorkflowsPage() {
             </div>
           </div>
           <div className="flex gap-2">
-            <button className="btn-ghost" onClick={loadWorkflow} title="加载">
+            <button className="btn-ghost" onClick={() => setShowLoginPrompt(true)} title="加载">
               <Upload size={16} />
               加载
             </button>
-            <button className="btn-ghost" onClick={saveWorkflow} title="保存">
+            <button className="btn-ghost" onClick={() => setShowLoginPrompt(true)} title="保存">
               <Save size={16} />
               保存
             </button>
-            <button className="btn-ghost" onClick={exportWorkflow} title="导出">
+            <button className="btn-ghost" onClick={() => setShowLoginPrompt(true)} title="导出">
               <Download size={16} />
               导出
             </button>
-            <button className="btn-primary" onClick={runWorkflow} title="运行">
+            <button className="btn-primary" onClick={() => setShowLoginPrompt(true)} title="运行">
               <Play size={16} />
               运行
             </button>
@@ -230,7 +235,7 @@ export default function WorkflowsPage() {
           <div className="text-sm font-semibold">添加节点</div>
           <button 
             className="btn-ghost text-red-600" 
-            onClick={deleteNode}
+            onClick={() => setShowLoginPrompt(true)}
             disabled={!selectedNode}
             title="删除选中节点"
           >
@@ -244,7 +249,7 @@ export default function WorkflowsPage() {
             return (
               <button
                 key={nt.id}
-                onClick={() => addNode(nt)}
+                onClick={() => setShowLoginPrompt(true)}
                 className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 transition-all ${nt.color} bg-opacity-10`}
               >
                 <Icon size={16} className={nt.color.replace('bg-', 'text-')} />
@@ -270,10 +275,7 @@ export default function WorkflowsPage() {
                 位置: ({Math.round(node.position.x)}, {Math.round(node.position.y)})
               </div>
               <button
-                onClick={() => {
-                  setSelectedNode(node.id);
-                  deleteNode();
-                }}
+                onClick={() => setShowLoginPrompt(true)}
                 className="btn-ghost text-red-600"
               >
                 <Trash2 size={16} />
@@ -334,6 +336,19 @@ export default function WorkflowsPage() {
           <div>· 点击"运行"执行工作流（演示）</div>
         </div>
       </div>
+
+      {/* 登录提示 */}
+      <LoginPrompt 
+        isOpen={showLoginPrompt} 
+        onClose={() => setShowLoginPrompt(false)}
+        onLogin={() => {
+          setShowLoginPrompt(false);
+          setShowLogin(true);
+        }}
+      />
+
+      {/* 登录弹窗 */}
+      <LoginModal isOpen={showLogin} onClose={() => setShowLogin(false)} />
     </div>
   );
 }
