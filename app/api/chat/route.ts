@@ -493,6 +493,20 @@ export async function POST(req: NextRequest): Promise<Response> {
                     }
                   }
                   
+                  // 检查是否有文本内容（即使有工具调用，也可能有文本）
+                  const responseText = gpt5Response.output_text || gpt5Response.text || '';
+                  if (responseText && responseText.trim()) {
+                    console.log(`📝 [GPT5-Pro] 同时有文本内容: ${responseText.substring(0, 100)}...`);
+                    const chunkSize = 50;
+                    for (let i = 0; i < responseText.length; i += chunkSize) {
+                      const chunk = responseText.slice(i, i + chunkSize);
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
+                      );
+                      await new Promise(resolve => setTimeout(resolve, 20));
+                    }
+                  }
+                  
                   // 继续循环，让 GPT-5 根据工具结果生成下一步响应
                   shouldContinue = true;
                   console.log(`🔄 工具执行完成，继续下一轮...`);
@@ -500,8 +514,17 @@ export async function POST(req: NextRequest): Promise<Response> {
                   // 没有工具调用，提取主要内容并结束
                   const responseText = gpt5Response.output_text || gpt5Response.text || '';
                   
-                  // 模拟流式输出文本内容
-                  if (responseText) {
+                  if (!responseText || !responseText.trim()) {
+                    console.warn(`⚠️ [GPT5-Pro] 响应内容为空`);
+                    // 发送提示信息
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ 
+                        type: "content", 
+                        content: "任务已完成。" 
+                      })}\n\n`)
+                    );
+                  } else {
+                    // 模拟流式输出文本内容
                     const chunkSize = 50;
                     for (let i = 0; i < responseText.length; i += chunkSize) {
                       const chunk = responseText.slice(i, i + chunkSize);
@@ -700,6 +723,20 @@ export async function POST(req: NextRequest): Promise<Response> {
                     }
                   }
                   
+                  // 检查是否有文本内容（即使有工具调用，也可能有文本）
+                  const responseText = gpt5Response.output_text || gpt5Response.text || '';
+                  if (responseText && responseText.trim()) {
+                    console.log(`📝 [GPT5-Thinking] 同时有文本内容: ${responseText.substring(0, 100)}...`);
+                    const chunkSize = 50;
+                    for (let i = 0; i < responseText.length; i += chunkSize) {
+                      const chunk = responseText.slice(i, i + chunkSize);
+                      controller.enqueue(
+                        encoder.encode(`data: ${JSON.stringify({ type: "content", content: chunk })}\n\n`)
+                      );
+                      await new Promise(resolve => setTimeout(resolve, 20));
+                    }
+                  }
+                  
                   // 继续循环
                   shouldContinue = true;
                   console.log(`🔄 工具执行完成，继续下一轮...`);
@@ -707,8 +744,17 @@ export async function POST(req: NextRequest): Promise<Response> {
                   // 没有工具调用，提取主要内容并结束
                   const responseText = gpt5Response.output_text || gpt5Response.text || '';
                   
-                  // 模拟流式输出文本内容
-                  if (responseText) {
+                  if (!responseText || !responseText.trim()) {
+                    console.warn(`⚠️ [GPT5-Thinking] 响应内容为空`);
+                    // 发送提示信息
+                    controller.enqueue(
+                      encoder.encode(`data: ${JSON.stringify({ 
+                        type: "content", 
+                        content: "任务已完成。" 
+                      })}\n\n`)
+                    );
+                  } else {
+                    // 模拟流式输出文本内容
                     const chunkSize = 50;
                     for (let i = 0; i < responseText.length; i += chunkSize) {
                       const chunk = responseText.slice(i, i + chunkSize);
