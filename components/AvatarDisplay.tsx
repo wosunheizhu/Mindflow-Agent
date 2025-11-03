@@ -701,8 +701,14 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
       console.error('小助理对话错误:', error);
       toast.error('对话失败');
       setCurrentReply('');
+      setCurrentReasoning('');
+      reasoningRef.current = '';
     } finally {
       setChatLoading(false);
+      // 确保清除状态
+      setCurrentReply('');
+      setCurrentReasoning('');
+      setCurrentReasoningExpanded(false);
     }
   };
 

@@ -40,9 +40,10 @@ export const TOOL_DEFS: ToolDefinition[] = [
             {key:'page',label:'页码（可选）',type:'number',placeholder:'不填则提取全部'}]
   },
 
-  { id:'image-analysis', name:'图片理解', icon:ImageIcon, category:'内容', description:'GPT-4o 视觉理解：识别图片内容、回答图片相关问题', realApi:true, zeroConfig:true, clientRunnerId:'image-analysis',
+  { id:'image-analysis', name:'图片理解', icon:ImageIcon, category:'内容', description:'GPT-4o 视觉理解：识别图片内容、回答图片相关问题', realApi:false, zeroConfig:true,
     params:[{key:'file',label:'图片文件',type:'file',required:true},
-            {key:'question',label:'问题（可选）',type:'text',placeholder:'例如：图片里有什么？'}]
+            {key:'question',label:'问题（可选）',type:'text',placeholder:'例如：图片里有什么？'}],
+    note: '提示：直接在聊天框上传图片更方便，AI 会自动分析'
   },
   { id:'ocr-aspose', name:'OCR 识别', icon:ScanLine, category:'内容', description:'Aspose OCR 高精度文字识别', realApi:true, zeroConfig:true, endpoint:'/api/tools/aspose-ocr', method:'POST',
     params:[{key:'file',label:'图片',type:'file',required:true},
