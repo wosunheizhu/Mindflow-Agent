@@ -350,24 +350,48 @@ async def avatar_chat_bidirectional(request: ChatRequest):
                 for i, msg in enumerate(history_messages[:2]):  # 打印前2条
                     logger.info(f"  [后端] [{i}] {msg['role']}: {msg['content'][:50]}...")
             
-            # 如果有上传文件，读取文件内容并添加到消息中
+            # 处理上传的文件（支持图片多模态和文本文件阅读）
             message_with_files = request.message
+            file_info_list = []  # 用于传递给 LLM 的文件信息
+            
             if request.uploaded_files:
-                file_contents = []
+                import os
+                import base64
+                import mimetypes
+                
                 for filename in request.uploaded_files:
                     try:
-                        # 构建文件路径（假设文件在uploads目录）
-                        import os
+                        # 构建文件路径
                         file_path = os.path.join('uploads', filename)
                         
-                        # 读取文件内容
-                        if filename.lower().endswith(('.txt', '.md')):
-                            # 文本文件直接读取
+                        # 判断文件类型
+                        mime_type, _ = mimetypes.guess_type(filename)
+                        mime_type = mime_type or 'application/octet-stream'
+                        
+                        # 图片文件：转为 base64 Data URL（豆包多模态支持）
+                        if mime_type.startswith('image/'):
+                            logger.info(f"🖼️ 处理图片文件: {filename}")
+                            with open(file_path, 'rb') as f:
+                                img_data = f.read()
+                                b64_data = base64.b64encode(img_data).decode('utf-8')
+                                data_url = f"data:{mime_type};base64,{b64_data}"
+                                
+                                file_info_list.append({
+                                    "name": filename,
+                                    "type": mime_type,
+                                    "url": data_url
+                                })
+                                logger.info(f"✅ 图片转换为 base64: {filename} ({len(b64_data)} chars)")
+                        
+                        # 文本文件：读取内容添加到消息
+                        elif filename.lower().endswith(('.txt', '.md')):
                             with open(file_path, 'r', encoding='utf-8') as f:
                                 content = f.read()
-                                file_contents.append(f"\n\n--- 文件 {filename} 内容 ---\n{content}\n--- 文件结束 ---")
+                                message_with_files += f"\n\n--- 文件 {filename} 内容 ---\n{content}\n--- 文件结束 ---"
+                                logger.info(f"📄 读取文本文件: {filename} ({len(content)} chars)")
+                        
+                        # PDF 文件
                         elif filename.lower().endswith('.pdf'):
-                            # PDF文件需要解析（如果安装了PyPDF2）
                             try:
                                 import PyPDF2
                                 with open(file_path, 'rb') as f:
@@ -375,25 +399,29 @@ async def avatar_chat_bidirectional(request: ChatRequest):
                                     content = ""
                                     for page in pdf_reader.pages:
                                         content += page.extract_text()
-                                    file_contents.append(f"\n\n--- 文件 {filename} 内容 ---\n{content}\n--- 文件结束 ---")
-                            except ImportError:
-                                logger.warning(f"PyPDF2未安装，无法读取PDF文件: {filename}")
-                                file_contents.append(f"\n\n[文件 {filename} - PDF文件，需要安装PyPDF2才能读取]")
-                        else:
-                            # 其他文件类型只显示文件名
-                            file_contents.append(f"\n\n[附件: {filename}]")
+                                    message_with_files += f"\n\n--- PDF {filename} 内容 ---\n{content}\n--- 文件结束 ---"
+                                    logger.info(f"📑 读取PDF文件: {filename}")
+                            except Exception as e:
+                                logger.warning(f"PDF读取失败: {e}")
+                                message_with_files += f"\n\n[PDF文件 {filename}，无法读取]"
                         
-                        logger.info(f"📎 成功读取文件: {filename}")
+                        else:
+                            message_with_files += f"\n\n[附件: {filename}]"
+                        
                     except Exception as e:
-                        logger.error(f"读取文件 {filename} 失败: {e}")
-                        file_contents.append(f"\n\n[文件 {filename} 读取失败]")
+                        logger.error(f"处理文件 {filename} 失败: {e}")
+                        message_with_files += f"\n\n[文件 {filename} 处理失败]"
                 
-                if file_contents:
-                    message_with_files = request.message + "".join(file_contents)
-                    logger.info(f"📎 添加了 {len(request.uploaded_files)} 个文件的内容")
+                logger.info(f"📎 文件处理完成：{len(file_info_list)} 个图片，文本已添加到消息")
             
-            # 双向流式处理（传递历史、Agent工作状态和深度思考模式）
-            async for event in streamer.chat_bidirectional_yield(message_with_files, history_messages, request.agent_working, request.deep_thinking):
+            # 双向流式处理（传递文件信息以支持多模态）
+            async for event in streamer.chat_bidirectional_yield(
+                message_with_files, 
+                history_messages, 
+                request.agent_working, 
+                request.deep_thinking,
+                uploaded_files=file_info_list if file_info_list else None
+            ):
                 logger.info(f"📬 [voice_server] 收到事件类型: {event['type']}")
                 
                 if event["type"] == "text":

@@ -61,8 +61,8 @@ class LLMTTSStreamer:
     
     def __init__(self, voice_type: str = "zh_female_sajiaonvyou_moon_bigtts"):
         self.ark_api_key = os.getenv("ARK_API_KEY")
-        # 使用支持thinking和文件阅读的flash模型
-        self.llm_model = "doubao-seed-1-6-flash-250828"
+        # 使用支持多模态（图片、文件）的模型
+        self.llm_model = "doubao-seed-1-6-251015"  # 支持图片和文件阅读
         self.tts_client = DoubaoTTSClient()
         self.tts_client.voice_type = voice_type
         self.voice_type = voice_type
@@ -512,9 +512,10 @@ class LLMTTSStreamer:
 3. 不要采访式提问
 4. 绝对不要在提示词里问用户问题"""
     
-    async def generate_chat_stream(self, user_message: str, history: list = None, agent_working: bool = False, deep_thinking: bool = False) -> AsyncGenerator[dict, None]:
-        """豆包LLM流式生成闲聊回复（支持对话历史和深度思考）
+    async def generate_chat_stream(self, user_message: str, history: list = None, agent_working: bool = False, deep_thinking: bool = False, uploaded_files: list = None) -> AsyncGenerator[dict, None]:
+        """豆包LLM流式生成闲聊回复（支持对话历史、深度思考、文件和图片）
         返回: {"type": "text", "content": ...} 或 {"type": "reasoning", "content": ...}
+        uploaded_files: [{"name": "file.jpg", "url": "https://...", "type": "image/jpeg"}]
         """
         url = "https://ark.cn-beijing.volces.com/api/v3/chat/completions"
         
@@ -541,11 +542,40 @@ class LLMTTSStreamer:
         else:
             logger.info("📚 无历史对话（首次对话）")
         
-        # 添加当前用户消息
-        messages.append({
-            "role": "user",
-            "content": user_message
-        })
+        # 添加当前用户消息（支持图片和文件）
+        if uploaded_files and len(uploaded_files) > 0:
+            # 构建多模态内容数组
+            content_array = []
+            
+            # 添加图片（如果有）
+            for file in uploaded_files:
+                if file.get('type', '').startswith('image/'):
+                    logger.info(f"🖼️ 添加图片到消息: {file.get('name')}")
+                    content_array.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": file.get('url') or file.get('path')
+                        }
+                    })
+            
+            # 添加文本消息
+            content_array.append({
+                "type": "text",
+                "text": user_message
+            })
+            
+            messages.append({
+                "role": "user",
+                "content": content_array
+            })
+            
+            logger.info(f"📎 多模态消息：{len(content_array)} 个内容项（含图片）")
+        else:
+            # 纯文本消息
+            messages.append({
+                "role": "user",
+                "content": user_message
+            })
         
         # 打印完整消息列表
         logger.info(f"📤 发送给LLM的消息数: {len(messages)}条")
@@ -708,11 +738,12 @@ class LLMTTSStreamer:
             logger.error(f"Agent总结流式错误: {e}")
     
     
-    async def chat_bidirectional_yield(self, user_message: str, history: list = None, agent_working: bool = False, deep_thinking: bool = False) -> AsyncGenerator[dict, None]:
+    async def chat_bidirectional_yield(self, user_message: str, history: list = None, agent_working: bool = False, deep_thinking: bool = False, uploaded_files: list = None) -> AsyncGenerator[dict, None]:
         """
         闲聊流式生成器（参考8:4 2实现：句子切分+独立TTS）
         LLM流式生成 → 按标点切句 → 每句独立TTS → 并行合成
         yield: {"type": "text", "content": "文本片段"} 或 {"type": "audio", "data": b"音频数据"} 或 {"type": "reasoning", "content": "推理内容"}
+        uploaded_files: [{"name": "file.jpg", "url": "data:image/jpeg;base64,...", "type": "image/jpeg"}]
         """
         full_text = ""
         sentence_buffer = ""
@@ -721,8 +752,8 @@ class LLMTTSStreamer:
         in_prompt = False  # 标记是否在提示词内部
         
         try:
-            # LLM流式生成（传递agent_working和deep_thinking状态）
-            async for chunk in self.generate_chat_stream(user_message, history, agent_working, deep_thinking):
+            # LLM流式生成（传递文件信息以支持多模态）
+            async for chunk in self.generate_chat_stream(user_message, history, agent_working, deep_thinking, uploaded_files):
                 # 处理不同类型的chunk
                 chunk_type = chunk.get("type", "text")
                 
