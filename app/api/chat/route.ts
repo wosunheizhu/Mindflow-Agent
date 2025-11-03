@@ -1055,7 +1055,7 @@ export async function POST(req: NextRequest): Promise<Response> {
                       type: "avatar_audio", 
                       audioBase64: llmTtsData.audioBase64,
                       audioSize: llmTtsData.audioSize,
-                      summaryText: llmTtsData.summaryText || "",  // 数字员工的总结文本
+                      summaryText: llmTtsData.summaryText || "",  // 小助理的总结文本
                       voice: avatarVoice 
                     })}\n\n`)
                   );

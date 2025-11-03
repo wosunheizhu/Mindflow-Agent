@@ -20,15 +20,15 @@ const steps: OnboardingStep[] = [
   },
   {
     id: 'step-2',
-    title: '数字员工对话',
-    description: '向吩咐真人一样和数字员工对话，让她帮您使用Agentic AI',
+    title: '小助理对话',
+    description: '向吩咐真人一样和小助理对话，让她帮您使用Agentic AI',
     targetId: 'avatar-chat',
     position: 'right' // 改为右侧
   },
   {
     id: 'step-3',
     title: '智能总结开关',
-    description: '开启时数字员工会帮您简短的，通俗易懂的总结Agentic AI的回答',
+    description: '开启时小助理会帮您简短的，通俗易懂的总结Agentic AI的回答',
     targetId: 'avatar-toggle',
     position: 'bottom' // 改为下方，避免超出屏幕上方
   }

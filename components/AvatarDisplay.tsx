@@ -12,9 +12,9 @@ type ChatMessage = {
   reasoningContent?: string; // 推理过程
 };
 
-// 清理文本：去除括号及其内容、数字员工名字前缀（前端也过滤，双重保障）
+// 清理文本：去除括号及其内容、小助理名字前缀（前端也过滤，双重保障）
 function cleanTextForDisplay(text: string): string {
-  // 去除数字员工名字前缀（小岚：、小远：、小岚 、小远 ）
+  // 去除小助理名字前缀（小岚：、小远：、小岚 、小远 ）
   let cleaned = text.replace(/^(小岚|小远)[：:：\s]+/g, '');
   
   // 去除所有括号及其内容
@@ -69,7 +69,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   const [currentReasoning, setCurrentReasoning] = useState(''); // 当前正在生成的推理内容
   const [isRecording, setIsRecording] = useState(false); // 麦克风录音状态
   
-  // 深度思考设置：只控制数字员工本身的 LLM（豆包），简单开关
+  // 深度思考设置：只控制小助理本身的 LLM（豆包），简单开关
   const [deepThinking, setDeepThinking] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     const saved = localStorage.getItem('avatar_deep_thinking');
@@ -78,7 +78,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   
   const [expandedReasoning, setExpandedReasoning] = useState<{[key: number]: boolean}>({}); // 每条消息的推理展开状态
   const [currentReasoningExpanded, setCurrentReasoningExpanded] = useState(false); // 当前推理的展开状态
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]); // 上传的文件
+  // 上传功能已移除
+  // const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [lastSummaryText, setLastSummaryText] = useState(''); // 上一次总结内容（用于去重）
   const [lastSummaryTime, setLastSummaryTime] = useState(0); // 上一次总结时间（用于去重）
   const [soundEnabled, setSoundEnabled] = useState(() => {
@@ -92,7 +93,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // 上传功能已移除
+  // const fileInputRef = useRef<HTMLInputElement | null>(null);
   const reasoningRef = useRef<string>(''); // 用 ref 实时跟踪 reasoning 内容
   const audioQueueRef = useRef<Map<number, Blob>>(new Map()); // 音频播放队列
   const currentlyPlayingRef = useRef<boolean>(false); // 是否正在播放
@@ -168,10 +170,10 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     }
   };
 
-  // 同步选择的数字员工到localStorage
+  // 同步选择的小助理到localStorage
   useEffect(() => {
     localStorage.setItem('selected_avatar_voice', selectedAvatar);
-    console.log(`📢 数字员工选择: ${selectedAvatar}`);
+    console.log(`📢 小助理选择: ${selectedAvatar}`);
   }, [selectedAvatar]);
 
   // 获取当前角色的图片列表
@@ -256,17 +258,17 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     const handleAgentMessage = (event: CustomEvent) => {
       const { type, text, voice, duration } = event.detail;
       
-      console.log(`🎧 [数字员工组件] 收到事件:`, { type, textLength: text?.length, voice, currentAvatar: selectedAvatar });
+      console.log(`🎧 [小助理组件] 收到事件:`, { type, textLength: text?.length, voice, currentAvatar: selectedAvatar });
       
-      // 检查是否是当前选择的数字员工
+      // 检查是否是当前选择的小助理
       if (voice !== selectedAvatar) {
-        console.log(`⏭️  [数字员工组件] 音色不匹配，忽略事件 (${voice} !== ${selectedAvatar})`);
+        console.log(`⏭️  [小助理组件] 音色不匹配，忽略事件 (${voice} !== ${selectedAvatar})`);
         return;
       }
       
       // 只处理总结，不处理计划（任务开始时不打断）
       if (type === 'avatar_summary') {
-        console.log(`✅ [数字员工组件] 处理 ${type} 事件，文本: ${text?.substring(0, 50)}...`);
+        console.log(`✅ [小助理组件] 处理 ${type} 事件，文本: ${text?.substring(0, 50)}...`);
         
         // 去重：检查是否与上一次总结相同或相似
         if (text && text.trim()) {
@@ -275,7 +277,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
           
           // 如果3秒内收到相同的总结内容，忽略（防止重复）
           if (trimmedText === lastSummaryText && (now - lastSummaryTime) < 3000) {
-            console.warn(`⚠️ [数字员工组件] 检测到重复总结（3秒内相同内容），忽略`);
+            console.warn(`⚠️ [小助理组件] 检测到重复总结（3秒内相同内容），忽略`);
             return;
           }
           
@@ -283,17 +285,17 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
           setLastSummaryText(trimmedText);
           setLastSummaryTime(now);
           
-          // 添加Agent触发的数字员工回复到历史
+          // 添加Agent触发的小助理回复到历史
           const assistantMessage: ChatMessage = { 
             role: 'assistant', 
             content: trimmedText 
           };
           setChatHistory(prev => {
             const newHistory = [...prev, assistantMessage];
-            console.log(`💬 [数字员工组件] 更新历史，当前总数: ${newHistory.length}`);
+            console.log(`💬 [小助理组件] 更新历史，当前总数: ${newHistory.length}`);
             return newHistory;
           });
-          console.log(`📥 [数字员工组件] 已添加消息到历史: ${trimmedText.substring(0, 30)}...`);
+          console.log(`📥 [小助理组件] 已添加消息到历史: ${trimmedText.substring(0, 30)}...`);
           
           // 触发说话动画
           setIsSpeaking(true);
@@ -302,18 +304,18 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
             setIsSpeaking(false);
           }, duration || 3000);
         } else {
-          console.warn(`⚠️ [数字员工组件] 文本为空，不添加到历史`);
+          console.warn(`⚠️ [小助理组件] 文本为空，不添加到历史`);
         }
       } else {
-        console.log(`⏭️  [数字员工组件] 忽略类型: ${type}`);
+        console.log(`⏭️  [小助理组件] 忽略类型: ${type}`);
       }
     };
 
-    console.log(`🎧 [数字员工组件] 注册事件监听器，当前音色: ${selectedAvatar}`);
+    console.log(`🎧 [小助理组件] 注册事件监听器，当前音色: ${selectedAvatar}`);
     window.addEventListener('agent_avatar_message' as any, handleAgentMessage as any);
     
     return () => {
-      console.log(`🔇 [数字员工组件] 移除事件监听器`);
+      console.log(`🔇 [小助理组件] 移除事件监听器`);
       window.removeEventListener('agent_avatar_message' as any, handleAgentMessage as any);
     };
   }, [selectedAvatar]);
@@ -321,12 +323,14 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   // 文件上传处理
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedFiles([...uploadedFiles, ...files]);
-    toast.success(`已添加 ${files.length} 个文件`);
+    // 上传功能已移除
+    // setUploadedFiles([...uploadedFiles, ...files]);
+    // toast.success(`已添加 ${files.length} 个文件`);
   };
 
   const removeFile = (index: number) => {
-    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+    // 上传功能已移除
+    // setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
   };
 
   // 语音录制功能
@@ -353,46 +357,19 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
   };
 
   const handleAvatarChat = async () => {
-    console.log(`🎯 [数字员工] handleAvatarChat 被调用，chatLoading=${chatLoading}, input="${chatInput.substring(0, 30)}..."`);
+    console.log(`🎯 [小助理] handleAvatarChat 被调用，chatLoading=${chatLoading}, input="${chatInput.substring(0, 30)}..."`);
     
     if (!chatInput.trim() || chatLoading) {
-      console.log(`⏭️  [数字员工] 跳过：输入为空或正在加载`);
+      console.log(`⏭️  [小助理] 跳过：输入为空或正在加载`);
       return;
     }
 
     let messageContent = chatInput;
-    let uploadedFilePaths: string[] = [];
-
-    // 如果有上传的文件，先上传到服务器
-    if (uploadedFiles.length > 0) {
-      try {
-        const formData = new FormData();
-        uploadedFiles.forEach(file => formData.append('files', file));
-
-        const uploadRes = await fetch('/api/upload-chat', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadData = await uploadRes.json();
-          uploadedFilePaths = uploadData.files.map((f: any) => f.filename);
-          const fileInfo = uploadData.files.map((f: any) => `[${f.type.startsWith('image/') ? '图片' : '文件'}: ${f.filename}]`).join(' ');
-          messageContent = `${fileInfo}\n\n${chatInput || '请分析这些文件'}`;
-          toast.success('文件上传成功');
-        }
-      } catch (err) {
-        toast.error('文件上传失败');
-        setChatLoading(false);
-        return;
-      }
-    }
-
+    // 上传功能已移除
     const userMessage = messageContent;
     const currentHistory = chatHistory; // 保存当前历史
     
     setChatInput('');
-    setUploadedFiles([]);
     setChatLoading(true);
     setCurrentReply(''); // 清空当前回复，准备接收新回复
     setCurrentReasoning(''); // 清空推理内容
@@ -497,7 +474,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     try {
       // 使用环境变量或本地地址
       const voiceServerUrl = process.env.NEXT_PUBLIC_VOICE_SERVER_URL || 'http://localhost:8001';
-      console.log(`📤 [前端] 发送请求到数字员工API，deep_thinking=${deepThinking}`);
+      console.log(`📤 [前端] 发送请求到小助理API，deep_thinking=${deepThinking}`);
       
       const response = await fetch(`${voiceServerUrl}/api/avatar-chat-stream`, {
         method: 'POST',
@@ -507,8 +484,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
           voice: selectedAvatar,
           history: currentHistory, // 发送当前历史（不包括刚添加的用户消息）
           agent_working: isAgentWorking, // 发送Agentic AI工作状态
-          deep_thinking: deepThinking, // 控制数字员工本身（豆包 LLM）的深度思考
-          uploaded_files: uploadedFilePaths // 上传的文件路径
+          deep_thinking: deepThinking, // 控制小助理本身（豆包 LLM）的深度思考
+          uploaded_files: [] // 上传功能已移除
         })
       });
       
@@ -630,7 +607,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                   console.log('💾 [done] 从 reasoningRef 读取: ' + savedReasoning.length + ' 字符');
 
                   if (fullText.trim()) {
-                    console.log(`📝 数字员工完整回复: ${fullText}`);
+                    console.log(`📝 小助理完整回复: ${fullText}`);
                     console.log(`📊 promptSent状态: ${promptSent}`);
                     console.log(`🧠 当前推理内容长度: ${savedReasoning.length}`);
                     
@@ -721,7 +698,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
         }
       }
     } catch (error) {
-      console.error('数字员工对话错误:', error);
+      console.error('小助理对话错误:', error);
       toast.error('对话失败');
       setCurrentReply('');
     } finally {
@@ -735,7 +712,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
     return null;
   }
 
-  // 获取数字员工头像（永远使用第一张图片）
+  // 获取小助理头像（永远使用第一张图片）
   const avatarImage = currentImages[0];
   const avatarName = selectedAvatar === 'zh_female_sajiaonvyou_moon_bigtts' ? '小岚' : '小远';
 
@@ -747,8 +724,8 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
         <div className="card p-4 mb-4 flex-shrink-0">
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1">
-              <div className="text-lg font-semibold">数字员工对话</div>
-              <div className="text-xs text-gray-500">与数字员工 {avatarName} 进行轻松对话</div>
+              <div className="text-lg font-semibold">小助理对话</div>
+              <div className="text-xs text-gray-500">与小助理 {avatarName} 进行轻松对话</div>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -779,7 +756,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                 <button
                   onClick={() => setShowLoginPrompt(true)}
                   className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors text-blue-600 dark:text-blue-400"
-                  title="添加数字员工"
+                  title="添加小助理"
                 >
                   <Plus size={14} />
                 </button>
@@ -787,7 +764,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
               {chatHistory.length > 0 && (
                 <button
                   onClick={() => {
-                    if (window.confirm('确认删除所有数字员工聊天记录？')) {
+                    if (window.confirm('确认删除所有小助理聊天记录？')) {
                     setChatHistory([]);
                     setCurrentReply('');
                     if (typeof window !== 'undefined') {
@@ -814,7 +791,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
         </div>
       ) : (
         <div className="flex items-center justify-between mb-2">
-          <div className="text-xs text-gray-500 font-medium">数字员工</div>
+          <div className="text-xs text-gray-500 font-medium">小助理</div>
           <div className="flex items-center gap-1">
             <button
               className={`p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded transition-colors ${
@@ -829,7 +806,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
               value={selectedAvatar}
               onChange={(e) => setSelectedAvatar(e.target.value)}
               className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
-              title="选择数字员工"
+              title="选择小助理"
             >
               <option value="zh_female_sajiaonvyou_moon_bigtts">小岚</option>
               <option value="zh_male_shaonianzixin_moon_bigtts">小远</option>
@@ -896,7 +873,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
         <>
           {/* 消息区域 */}
           <div className="card overflow-y-auto p-4 mb-4 flex-1">
-            {/* 空状态：居中显示数字员工图片 */}
+            {/* 空状态：居中显示小助理图片 */}
             {chatHistory.length === 0 && !currentReply && (
               <div className="flex items-center justify-center h-full text-gray-500">
                 <div className="text-center">
@@ -911,7 +888,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                     </div>
                   </div>
                   <div className="text-base font-medium mb-2">与 {avatarName} 对话</div>
-                  <div className="text-sm">可以和数字员工轻松闲聊</div>
+                  <div className="text-sm">可以和小助理轻松闲聊</div>
                 </div>
               </div>
             )}
@@ -926,7 +903,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
                   }
                   return (
                   <div key={idx} className={`mb-4 flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    {/* 数字员工消息：左侧显示头像 */}
+                    {/* 小助理消息：左侧显示头像 */}
                     {msg.role === 'assistant' && (
                       <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden bg-white dark:bg-white flex items-center justify-center ring-2 ring-lime-400 shadow-sm">
                         <div className="relative w-6 h-6">
@@ -1044,52 +1021,18 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
           {/* 输入区域 */}
           <div className="card p-4 flex-shrink-0">
             {/* 文件上传区域 */}
-            {uploadedFiles.length > 0 && (
-              <div className="mb-3 flex flex-wrap gap-2">
-                {uploadedFiles.map((file, idx) => (
-                  <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg text-sm">
-                    {file.type.startsWith('image/') ? (
-                      <ImageIcon size={14} className="text-blue-600" />
-                    ) : (
-                      <FileText size={14} className="text-blue-600" />
-                    )}
-                    <span className="text-blue-900 dark:text-blue-100">{file.name}</span>
-                    <button
-                      onClick={() => removeFile(idx)}
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+            {/* 上传功能已移除 */}
 
             {/* 功能选项栏 */}
             <div className="flex items-center gap-2 mb-3 pb-3 border-b border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="btn-ghost text-sm"
-                title="上传文件或图片"
-              >
-                <Upload size={16} />
-                上传
-              </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/*,.pdf,.doc,.docx,.txt,.md"
-                onChange={handleFileSelect}
-                className="hidden"
-              />
+              {/* 上传功能已移除 */}
               
               <div className="h-6 w-px bg-gray-300 dark:bg-gray-600"></div>
               
               <button
                 onClick={() => setDeepThinking(!deepThinking)}
                 className={`btn-ghost text-sm ${deepThinking ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400' : ''}`}
-                title="深度思考模式（数字员工使用更强推理能力）"
+                title="深度思考模式（小助理使用更强推理能力）"
               >
                 <Brain size={16} className={deepThinking ? 'text-purple-600' : ''} />
                 深度思考
@@ -1206,7 +1149,7 @@ export default function AvatarDisplay({ isExpanded: externalIsExpanded, onExpand
       )}
       </div>
 
-      {/* 公司信息：展开状态下隐藏，放在数字员工窗口外面 */}
+      {/* 公司信息：展开状态下隐藏，放在小助理窗口外面 */}
       {!isExpanded && (
         <div className="card p-3 mt-3">
           <div className="text-center space-y-1">

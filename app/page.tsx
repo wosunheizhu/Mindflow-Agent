@@ -54,7 +54,7 @@ export default function Page() {
             Mindflow Agent
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-            首创融合数字员工与 Agentic AI 的新一代个性化协作平台
+            首创融合小助理与 Agentic AI 的新一代个性化协作平台
           </p>
           <div className="flex gap-4 justify-center">
             <Link 
@@ -125,9 +125,9 @@ export default function Page() {
         `}</style>
       </section>
 
-      {/* 数字员工和 Agentic AI 介绍 - 左右对齐 */}
+      {/* 小助理和 Agentic AI 介绍 - 左右对齐 */}
       <section className="grid md:grid-cols-2 gap-6 items-stretch">
-        {/* 数字员工 */}
+        {/* 小助理 */}
         <div 
           className="card p-6 flex flex-col transition-all hover:shadow-xl"
           onMouseEnter={() => setHoveredCard('avatar')}
@@ -138,7 +138,7 @@ export default function Page() {
               <UserCircle2 size={24} className="text-lime-600 dark:text-lime-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">数字员工</h2>
+              <h2 className="text-lg font-semibold">小助理</h2>
               <p className="text-sm text-gray-500">您的智能语音助理</p>
             </div>
           </div>
@@ -171,10 +171,10 @@ export default function Page() {
             <div className="p-4 bg-purple-500 bg-opacity-10 rounded-lg border-2 border-gray-200 dark:border-gray-700 hover:border-purple-400 transition-all hover:scale-105 hover:shadow-md cursor-pointer">
               <div className="flex items-center gap-2 mb-2">
                 <Palette size={16} className="text-purple-600 dark:text-purple-400" />
-                <div className="font-semibold text-gray-900 dark:text-gray-100">可定制数字员工</div>
+                <div className="font-semibold text-gray-900 dark:text-gray-100">可定制小助理</div>
               </div>
               <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
-                <div>· 自定义数字员工的声音、性格和语言风格</div>
+                <div>· 自定义小助理的声音、性格和语言风格</div>
                 <div>· 灵活配置工作场景和交互模式</div>
                 <div>· 打造专属的智能助理形象</div>
               </div>

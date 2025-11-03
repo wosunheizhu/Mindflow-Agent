@@ -24,9 +24,9 @@ type Message = {
   thinkingSteps?: string[];
   reasoningContent?: string; // Agentic AI的推理过程（GPT-5等推理模型）
   modelThinking?: string; // 模型思考过程
-  fromAvatar?: boolean; // 标记消息是否来自数字员工
-  avatarName?: string; // 数字员工名字
-  avatarImage?: string; // 数字员工头像路径
+  fromAvatar?: boolean; // 标记消息是否来自小助理
+  avatarName?: string; // 小助理名字
+  avatarImage?: string; // 小助理头像路径
 };
 
 // 音色配置
@@ -36,11 +36,11 @@ const voiceConfigs: Record<string, {name: string, rate: number, pitch: number, v
 };
 
 function getVoiceName(voiceId: string): string {
-  return voiceConfigs[voiceId]?.name || '数字员工';
+  return voiceConfigs[voiceId]?.name || '小助理';
 }
 
 function getVoiceConfig(voiceId: string) {
-  return voiceConfigs[voiceId] || { name: '数字员工', rate: 1.0, pitch: 1.0, volume: 1.0 };
+  return voiceConfigs[voiceId] || { name: '小助理', rate: 1.0, pitch: 1.0, volume: 1.0 };
 }
 
 // Base64转Blob
@@ -80,12 +80,12 @@ export default function ChatPage() {
   
   const [browserSearch, setBrowserSearch] = useState(false);
   const [selectedModel, setSelectedModel] = useState<'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude'>('openai');
-  const [avatarEnabled, setAvatarEnabled] = useState(true); // 数字员工功能开关（默认开启）
+  const [avatarEnabled, setAvatarEnabled] = useState(true); // 小助理功能开关（默认开启）
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false); // 登录提示弹窗
   const [showLogin, setShowLogin] = useState(false); // 登录弹窗
   
-  // 从localStorage读取数字员工选择（由左侧数字员工框控制）
+  // 从localStorage读取小助理选择（由左侧小助理框控制）
   const getSelectedVoice = () => {
     if (typeof window === 'undefined') {
       return 'zh_female_sajiaonvyou_moon_bigtts';
@@ -175,7 +175,7 @@ export default function ChatPage() {
     let lastProcessedPrompt = '';
     let lastProcessedTime = 0;
 
-    // 监听数字员工发送的任务
+    // 监听小助理发送的任务
     const handleAvatarTask = (event: CustomEvent) => {
       const { prompt, avatarName, avatarImage } = event.detail;
       const now = Date.now();
@@ -196,7 +196,7 @@ export default function ChatPage() {
       
       console.log(`✅ [主页面] 通过防重复检查，继续处理任务`);
       
-      // 创建一个来自数字员工的消息
+      // 创建一个来自小助理的消息
       const avatarMessage: Message = {
         role: 'user',
         content: prompt,
@@ -306,14 +306,14 @@ export default function ChatPage() {
     }
   };
 
-  // 处理来自数字员工的任务提交
+  // 处理来自小助理的任务提交
   const handleSubmitFromAvatar = async (newMessages: Message[]) => {
     if (loading) {
       toast.error('Agentic AI 正在处理任务，请稍后');
       return;
     }
 
-    shouldAutoScroll.current = true; // 数字员工发送任务时自动滚动到底部
+    shouldAutoScroll.current = true; // 小助理发送任务时自动滚动到底部
     setLoading(true);
     localStorage.setItem('agent_working', 'true');
     setThinkingProcess([]);
@@ -323,7 +323,7 @@ export default function ChatPage() {
       
       // 使用 ref 获取最新的 selectedModel（避免闭包陷阱）
       const currentModel = selectedModelRef.current;
-      console.log(`🚀 [数字员工任务] 使用模型: ${currentModel}`);
+      console.log(`🚀 [小助理任务] 使用模型: ${currentModel}`);
       
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -375,7 +375,7 @@ export default function ChatPage() {
         if (!text || !text.trim()) return;
         _avatarSummaryPlayed = true;
 
-        // 1) 通知数字员工组件显示总结气泡
+        // 1) 通知小助理组件显示总结气泡
         try {
           window.dispatchEvent(new CustomEvent('agent_avatar_message', {
             detail: {
@@ -499,8 +499,8 @@ export default function ChatPage() {
                     }]);
                   }
                 } else if (parsed.type === 'avatar_start') {
-                  // 数字员工开始总结
-                  console.log('🎤 [数字员工任务] 数字员工开始总结...');
+                  // 小助理开始总结
+                  console.log('🎤 [小助理任务] 小助理开始总结...');
                 } else if (parsed.type === 'avatar_audio') {
                   // 仅缓存"最后一条"avatar 总结，不立刻播报
                   const currentVoice = parsed.voice || getSelectedVoice();
@@ -545,7 +545,7 @@ export default function ChatPage() {
         thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
       }]);
     } catch (error) {
-      console.error('处理数字员工任务错误:', error);
+      console.error('处理小助理任务错误:', error);
       toast.error('处理任务失败');
       setMessages([...newMessages, { role: 'assistant', content: '抱歉，处理请求时出错。' }]);
     } finally {
@@ -592,7 +592,7 @@ export default function ChatPage() {
     setInput('');
     setUploadedFiles([]);
     setLoading(true);
-    localStorage.setItem('agent_working', 'true'); // 通知数字员工：Agent开始工作
+    localStorage.setItem('agent_working', 'true'); // 通知小助理：Agent开始工作
     setThinkingProcess([]); // 重置思考过程
 
     try {
@@ -664,7 +664,7 @@ export default function ChatPage() {
         if (!text || !text.trim()) return;
         _avatarSummaryPlayed = true;
 
-        // 1) 通知数字员工组件显示总结气泡
+        // 1) 通知小助理组件显示总结气泡
         try {
           window.dispatchEvent(new CustomEvent('agent_avatar_message', {
             detail: {
@@ -817,12 +817,12 @@ export default function ChatPage() {
                     thinkingSteps: currentThinkingSteps.length > 0 ? currentThinkingSteps : undefined
                   }]);
                 } else if (parsed.type === 'avatar_planning') {
-                  // 数字员工任务计划已禁用（不在任务开始时打断）
-                  console.log('⏭️ 跳过数字员工计划回复');
+                  // 小助理任务计划已禁用（不在任务开始时打断）
+                  console.log('⏭️ 跳过小助理计划回复');
                   
                 } else if (parsed.type === 'avatar_start') {
-                  // 数字员工开始第二次回答（静默处理）
-                  console.log('🎤 数字员工开始总结...');
+                  // 小助理开始第二次回答（静默处理）
+                  console.log('🎤 小助理开始总结...');
                 } else if (parsed.type === 'avatar_audio') {
                   // 仅缓存"最后一条"avatar 总结，不立刻播报
                   const currentVoice = parsed.voice || getSelectedVoice();
@@ -846,8 +846,8 @@ export default function ChatPage() {
                     await _playAvatarSummaryOnce();
                   }
                 } else if (parsed.type === 'avatar_error') {
-                  // 数字员工服务错误
-                  toast.error(parsed.content || '数字员工服务错误', { id: 'avatar-summary' });
+                  // 小助理服务错误
+                  toast.error(parsed.content || '小助理服务错误', { id: 'avatar-summary' });
                 } else if (parsed.type === 'error') {
                   throw new Error(parsed.error);
                 }
@@ -860,7 +860,7 @@ export default function ChatPage() {
       setMessages([...newMessages, { role: 'assistant', content: '抱歉，处理请求时出错。' }]);
     } finally {
       setLoading(false);
-      localStorage.setItem('agent_working', 'false'); // 通知数字员工：Agent完成工作
+      localStorage.setItem('agent_working', 'false'); // 通知小助理：Agent完成工作
       // 不清空思考过程，保留显示
     }
   };
@@ -1007,7 +1007,7 @@ export default function ChatPage() {
                         {msg.fromAvatar ? (
                           <>
                             <UserCircle2 size={12} />
-                            <span>{msg.avatarName || '数字员工'}</span>
+                            <span>{msg.avatarName || '小助理'}</span>
                           </>
                         ) : (
                       <>
@@ -1094,7 +1094,7 @@ export default function ChatPage() {
                     <div className="relative w-6 h-6">
                       <img
                         src={`/avatars/${msg.avatarImage}`}
-                        alt={msg.avatarName || '数字员工'}
+                        alt={msg.avatarName || '小助理'}
                         className="object-contain w-full h-full"
                       />
                     </div>
@@ -1209,10 +1209,10 @@ export default function ChatPage() {
             id="avatar-toggle"
             onClick={() => setAvatarEnabled(!avatarEnabled)}
             className={`btn-ghost text-sm ${avatarEnabled ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400' : ''}`}
-            title="语音数字员工（AI语音总结播报）"
+            title="语音小助理（AI语音总结播报）"
           >
             <Volume2 size={16} className={avatarEnabled ? 'text-orange-600' : ''} />
-            数字员工
+            小助理
             {avatarEnabled && (
               <span className="ml-1 text-xs px-1.5 py-0.5 rounded bg-orange-200 dark:bg-orange-800 text-orange-800 dark:text-orange-200">
                 ON

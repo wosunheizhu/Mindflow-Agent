@@ -26,7 +26,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       const isAgentWorking = localStorage.getItem('agent_working') === 'true';
       if (isAgentWorking) {
         const confirmed = window.confirm(
-          'Agentic AI 任务正在执行中，切换数字员工窗口状态将可能影响任务执行。是否确认继续？'
+          'Agentic AI 任务正在执行中，切换小助理窗口状态将可能影响任务执行。是否确认继续？'
         );
         if (!confirmed) {
           return; // 用户取消，不执行展开/收起
@@ -48,10 +48,10 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       <NavTop />
       
       <div className="relative">
-      {/* 展开状态下的整体布局：左侧数字员工 + 右侧主内容 */}
+      {/* 展开状态下的整体布局：左侧小助理 + 右侧主内容 */}
       {isAvatarExpanded ? (
         <div className="flex h-[calc(100vh-4rem)]">
-          {/* 左侧：数字员工（50%宽度） */}
+          {/* 左侧：小助理（50%宽度） */}
           <div className="w-1/2 border-r border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden">
             <div className="p-4 h-full flex flex-col">
               <AvatarDisplay isExpanded={true} onExpandChange={handleExpandChange} />
