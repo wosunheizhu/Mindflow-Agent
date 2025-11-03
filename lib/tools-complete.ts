@@ -1832,39 +1832,13 @@ async function createPresentation(
   slides: Array<{ title: string; content: string }>,
   presentationTitle?: string
 ) {
-  try {
-    console.log(`📊 开始创建 PPT: ${filename}, 幻灯片数: ${slides.length}`);
-    console.log(`🎨 使用 Carbone ODP 模板生成`);
-    
-    // 使用 Carbone 生成 PPT
-    const { buffer, filename: pptxFilename } = await generatePPTWithCarbone(
-      filename,
-      slides,
-      presentationTitle
-    );
-    
-    // 上传到云存储
-    const downloadUrl = await uploadAndGetUrl(buffer, pptxFilename, 'application/vnd.openxmlformats-officedocument.presentationml.presentation');
-    
-    console.log(`✅ PPT 生成成功: ${pptxFilename}, 文件大小: ${(buffer.length / 1024).toFixed(2)} KB`);
-    
-    return {
-      success: true,
-      filename: pptxFilename,
-      slides_count: slides.length,
-      download_url: downloadUrl,
-      size: `${(buffer.length / 1024).toFixed(2)} KB`,
-      note: `✅ PPT 已生成，点击下载: ${downloadUrl}`
-    };
-  } catch (error: any) {
-    console.error('❌ PPT 创建失败:', error.message);
-    return {
-      error: "PPT 创建失败",
-      message: error.message,
-      filename: filename,
-      note: "PPT 生成遇到问题，请检查幻灯片内容或稍后重试"
-    };
-  }
+  // PPT 功能已禁用
+  console.log(`❌ PPT 功能已禁用`);
+  return {
+    error: "PPT 功能暂不支持",
+    message: "抱歉，当前系统不支持 PPT 生成功能。建议使用 Word 文档或 Markdown 格式替代。",
+    note: "💡 建议：可以生成 Word 文档，然后手动转换为 PPT，或使用 Markdown 格式。"
+  };
 }
 
 // Aspose 实现（已修复路径问题，使用 /tmp）
