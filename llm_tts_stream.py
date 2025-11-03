@@ -55,7 +55,7 @@ class LLMTTSStreamer:
         'zh_female_sajiaonvyou_moon_bigtts': {
             'gender': 'female',
             'name': '小岚',
-            'personality': '可爱活泼，偶尔撒娇'
+            'personality': '可爱活泼'
         }
     }
     
@@ -73,7 +73,7 @@ class LLMTTSStreamer:
         self.persona = self.VOICE_PERSONAS.get(voice_type, {
             'gender': 'female',
             'name': '小岚',
-            'personality': '可爱活泼，偶尔撒娇'
+            'personality': '可爱活泼'
         })
     
     async def warm_up(self):
@@ -420,11 +420,23 @@ class LLMTTSStreamer:
 示例5：用户说"帮我查一下AI技术"
 回复：这就去 {{搜索2024-2025年AI技术最新进展，重点关注大模型、多模态、Agent三个方向，整理成结构化报告约1500字（内容详实，包含具体案例和数据），提供参考来源链接。}}
 
-重要提示：
-- 推荐格式：Markdown、Word、Excel、HTML图表
-- 不推荐PDF（用户需要时建议用Word或HTML替代）
+格式选择规则（严格遵守）：
+- 推荐格式：Markdown、Word、Excel、PPT、HTML图表
+- 严格禁止PDF：即使用户要求PDF，也要改为Word或HTML（可打印为PDF）
+- 如果用户说"生成PDF"，提示词中必须改为"生成Word文档"或"生成HTML文档"
+- 绝对不要在提示词中出现"PDF格式"、"生成PDF"等字样
+
+文档质量要求：
 - 文档必须内容详实，不能敷衍
 - 图表必须基于真实数据，同时提供CSV数据文件
+
+错误示例：
+用户："生成PDF报告"
+你的提示词：{{生成PDF报告...}} ← 错误！
+
+正确示例：
+用户："生成PDF报告"
+你的提示词：{{生成Word文档报告...（用户可以在浏览器中打印为PDF）}}
 
 ## 注意事项
 
