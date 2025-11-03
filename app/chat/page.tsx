@@ -604,18 +604,18 @@ export default function ChatPage() {
       console.log(`🧠 [主聊天] 深度思考: ${deepThinkingEnabled}, 等级: ${deepThinkingLevel}`);
       
       const requestBody = { 
-        messages: newMessages,
-        // 兼容旧字段
-        deepThinking: deepThinkingEnabled,
-        // 新字段：显式控制 GPT-5 Responses 的 reasoning.effort
-        reasoning: deepThinkingEnabled ? { effort: deepThinkingLevel } : { effort: 'low' },
-        deepThinkingEnabled,
-        deepThinkingLevel,
-        browserSearch: browserSearch,
-        avatarEnabled: avatarEnabled,
-        avatarVoice: getSelectedVoice(), // 从localStorage读取
-        modelProvider: currentModel, // 使用 ref 中的最新值
-        hasFiles: uploadedFiles.length > 0
+          messages: newMessages,
+          // 兼容旧字段
+          deepThinking: deepThinkingEnabled,
+          // 新字段：显式控制 GPT-5 Responses 的 reasoning.effort
+          reasoning: deepThinkingEnabled ? { effort: deepThinkingLevel } : { effort: 'low' },
+          deepThinkingEnabled,
+          deepThinkingLevel,
+          browserSearch: browserSearch,
+          avatarEnabled: avatarEnabled,
+          avatarVoice: getSelectedVoice(), // 从localStorage读取
+          modelProvider: currentModel, // 使用 ref 中的最新值
+          hasFiles: uploadedFiles.length > 0
       };
       
       console.log(`📤 [主聊天] 发送请求:`, requestBody);
@@ -880,13 +880,22 @@ export default function ChatPage() {
             <label className="text-xs text-gray-500 whitespace-nowrap">模型:</label>
             <select 
               value={selectedModel} 
-              onChange={(e) => setSelectedModel(e.target.value as 'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude')}
+              onChange={(e) => {
+                const newModel = e.target.value;
+                // 拦截 beta-testing 模型
+                if (newModel === 'gpt5-pro' || newModel === 'gpt5-thinking' || newModel === 'claude') {
+                  setShowLoginPrompt(true);
+                  // 不切换模型
+                  return;
+                }
+                setSelectedModel(newModel as 'openai' | 'gpt5-thinking' | 'gpt5-pro' | 'claude');
+              }}
               className="select text-sm py-1 px-2"
               disabled={loading}
             >
               <option value="openai">Mindflow-Y-Workflow（推荐-自动工作流）</option>
-              <option value="gpt5-pro">Mindflow-Y-Pro（强推理）</option>
-              <option value="gpt5-thinking">Mindflow-Y（强推理）</option>
+              <option value="gpt5-pro">Mindflow-Y-Pro（Beta-Testing）</option>
+              <option value="gpt5-thinking">Mindflow-Y（Beta-Testing）</option>
               <option value="claude">Mindflow-X-Workflow（Beta-Testing）</option>
             </select>
             {messages.length > 0 && (
