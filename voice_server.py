@@ -348,8 +348,21 @@ async def avatar_chat_bidirectional(request: ChatRequest):
                 
                 for filename in request.uploaded_files:
                     try:
-                        # 构建文件路径
-                        file_path = os.path.join('uploads', filename)
+                        # 构建文件路径（支持绝对路径和相对路径）
+                        if os.path.isabs(filename):
+                            # 如果是绝对路径，直接使用
+                            file_path = filename
+                        else:
+                            # 相对路径，在当前目录的 uploads 下查找
+                            file_path = os.path.join(os.getcwd(), 'uploads', filename)
+                        
+                        logger.info(f"📂 查找文件路径: {file_path}")
+                        
+                        # 检查文件是否存在
+                        if not os.path.exists(file_path):
+                            logger.error(f"❌ 文件不存在: {file_path}")
+                            message_with_files += f"\n\n[文件 {filename} 未找到]"
+                            continue
                         
                         # 判断文件类型
                         mime_type, _ = mimetypes.guess_type(filename)
