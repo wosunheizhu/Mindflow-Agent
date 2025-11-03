@@ -6,6 +6,7 @@ import NavTop from './NavTop';
 import SideNav from './SideNav';
 import CommandBar from './CommandBar';
 import AvatarDisplay from './AvatarDisplay';
+import FloatingBugBall from './FloatingBugBall';
 
 export default function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -46,6 +47,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
     <div className="min-h-screen">
       <CommandBar />
       <NavTop />
+      <FloatingBugBall />
       
       <div className="relative">
       {/* 展开状态下的整体布局：左侧小助理 + 右侧主内容 */}
