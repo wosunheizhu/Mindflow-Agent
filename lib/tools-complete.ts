@@ -1340,9 +1340,14 @@ async function analyzeImageTool(filename: string, question?: string) {
     const filepath = path.join(uploadsDir, matchedFile);
     const result = await analyzeImage(filepath, question);
     
+    // 移除 imageUrl（太长，会导致响应超时）
+    const { imageUrl, ...resultWithoutUrl } = result;
+    
     return {
       filename: matchedFile,
-      ...result,
+      ...resultWithoutUrl,
+      // 只保留分析结果，不返回完整的 base64 图片
+      note: result.note || "✅ 使用 GPT-4o Vision 分析图片"
     };
   } catch (error: any) {
     return {
