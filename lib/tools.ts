@@ -40,14 +40,7 @@ export const TOOL_DEFS: ToolDefinition[] = [
             {key:'page',label:'页码（可选）',type:'number',placeholder:'不填则提取全部'}]
   },
 
-  { id:'image-analysis', name:'图片理解（建议直接上传）', icon:ImageIcon, category:'内容', description:'GPT-4o 视觉理解：识别图片内容、回答图片相关问题。建议：直接在聊天框上传图片更方便', realApi:false, zeroConfig:true,
-    params:[{key:'file',label:'图片文件',type:'file',required:true},
-            {key:'question',label:'问题（可选）',type:'text',placeholder:'例如：图片里有什么？'}]
-  },
-  { id:'ocr-aspose', name:'OCR 识别', icon:ScanLine, category:'内容', description:'Aspose OCR 高精度文字识别', realApi:true, zeroConfig:true, endpoint:'/api/tools/aspose-ocr', method:'POST',
-    params:[{key:'file',label:'图片',type:'file',required:true},
-            {key:'language',label:'语言',type:'select',options:[{label:'自动检测',value:'auto'},{label:'中文',value:'chinese'},{label:'英文',value:'english'}],defaultValue:'auto'}]
-  },
+  {/* OCR 和图片理解工具已移除 */}
   { id:'qrcode-gen', name:'二维码生成', icon:QrCode, category:'内容', description:'生成二维码图片', realApi:true, zeroConfig:true, endpoint:'/api/tools/aspose-qrcode', method:'POST',
     params:[{key:'text',label:'文本或链接',type:'text',required:true,placeholder:'例如：https://evercall.ai'},
             {key:'size',label:'尺寸(像素)',type:'number',defaultValue:300}]
